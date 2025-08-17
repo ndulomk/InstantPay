@@ -1,0 +1,20 @@
+{
+  "name": "instantpay",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "bun@1.1.21",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bunx lerna run dev --parallel",
+    "build": "bunx lerna run build",
+    "start": "bunx lerna run start"
+  },
+  "devDependencies": {
+    "lerna": "^8.2.3",
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.5.5"
+  }
+}
