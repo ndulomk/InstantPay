@@ -5,6 +5,9 @@ const server = fastify()
 server.get('/ping', async(request, reply)=>{
   return 'pong\n'
 })
+server.get('/hey', async(request, reply)=>{
+  return "hey"
+})
 
 server.listen({ port: 9999 }, (err, address)=>{
   if(err) {
