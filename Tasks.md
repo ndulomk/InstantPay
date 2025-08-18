@@ -1,7 +1,7 @@
 #### **Task 1.1: Setup do Projeto e Infraestrutura Base**
 - [X] 1.1.1 - Criar monorepo com Lerna/Nx
 - [X] 1.1.2 - Configurar TypeScript para todos os packages
-- [ ] 1.1.3 - Setup ESLint + Prettier + Husky
+- [X] 1.1.3 - Setup ESLint + Prettier + Husky
 - [ ] 1.1.4 - Criar estrutura de pastas completa (7 microserviços)
 - [ ] 1.1.5 - Configurar Docker Compose para desenvolvimento local
 - [ ] 1.1.6 - Setup PostgreSQL + Redis containers
