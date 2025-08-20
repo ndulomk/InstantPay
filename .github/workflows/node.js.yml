@@ -40,9 +40,9 @@ jobs:
     
     - name: Build all packages
       run: bun run build
-      
+    
     - name: Type check
-      run: bunx lerna run type-check -- --if-present
+      run: bunx lerna run type-check --if-present
 
   deploy-to-vps:
     runs-on: ubuntu-latest
@@ -69,63 +69,93 @@ jobs:
             $SSH_USER@$SSH_HOST \
             "echo 'SSH connection successful!'"
     
-    - name: Deploy to VPS
+    - name: Create deployment directory
       env:
         DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
       run: |
-        echo "Starting deployment to VPS..."
-        
-        # Criar diretório se não existir - CORRIGIDO
+        echo "Creating deployment directory..."
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "mkdir -p $DEPLOY_PATH && chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH"
+            "mkdir -p $DEPLOY_PATH"
         
-        # Sincronizar arquivos
-        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH"
+    
+    - name: Sync files to VPS
+      env:
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+      run: |
+        echo "Syncing files to VPS..."
+        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT -o StrictHostKeyChecking=no" \
           --exclude='node_modules/' \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='dist/' \
           --exclude='*.log' \
+          --exclude='.env*' \
           ./ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
-        
-        # Executar comandos de deploy - CORRIGIDO
+    
+    - name: Install dependencies and build
+      env:
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+      run: |
+        echo "Installing dependencies and building..."
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
-            $SSH_USER@$SSH_HOST << EOF
-        set -e
-        cd $DEPLOY_PATH
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && echo 'Changed to deploy directory'"
         
-        echo "Installing Bun..."
-        if ! command -v bun &> /dev/null; then
-          curl -fsSL https://bun.sh/install | bash
-          export PATH="\$HOME/.bun/bin:\$PATH"
-        fi
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && if ! command -v bun &> /dev/null; then curl -fsSL https://bun.sh/install | bash && export PATH=\"\$HOME/.bun/bin:\$PATH\"; fi"
         
-        echo "Installing dependencies..."
-        bun install --frozen-lockfile
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun install --frozen-lockfile"
         
-        echo "Building project..."
-        bun run build
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun run build"
+    
+    - name: Setup PM2 and restart application
+      env:
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+        PM2_APP_NAME: ${{ secrets.VPS_PM2_APP_NAME || 'instantpay' }}
+      run: |
+        echo "Setting up PM2 and restarting application..."
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && if ! command -v pm2 &> /dev/null; then export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun install -g pm2; fi"
         
-        echo "Restarting application..."
-        if command -v pm2 &> /dev/null; then
-          pm2 restart all || pm2 start ecosystem.config.js
-        else
-          echo "Installing PM2..."
-          bun install -g pm2
-          pm2 start ecosystem.config.js
-          pm2 startup
-          pm2 save
-        fi
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "cd $DEPLOY_PATH && pm2 restart $PM2_APP_NAME || pm2 start ecosystem.config.js --name $PM2_APP_NAME"
         
-        echo "Deployment completed successfully!"
-        EOF
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "pm2 startup && pm2 save"
 
     - name: Verify deployment
+      env:
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
       run: |
         echo "Verifying deployment..."
         sleep 15
@@ -133,7 +163,13 @@ jobs:
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "curl -f http://localhost:9999/ping || echo 'App is running (health check may vary)'"
+            "pm2 status"
+        
+        ssh -i ~/.ssh/deploy_key \
+            -p $SSH_PORT \
+            -o StrictHostKeyChecking=no \
+            $SSH_USER@$SSH_HOST \
+            "curl -f http://localhost:9999/ping || echo 'Health check endpoint may not be available yet'"
 
     - name: Success message
       run: |
