@@ -7,7 +7,7 @@
 - [ ] 1.1.6 - Setup PostgreSQL + Redis containers
 - [ ] 1.1.7 - Configurar variáveis de ambiente (.env files)
 - [ ] 1.1.8 - Setup Winston logging estruturado
-- [ ] 1.1.9 - Configurar GitHub Actions básico
+- [X] 1.1.9 - Configurar GitHub Actions básico
 - [ ] 1.1.10 - Criar documentação README inicial
 
 #### **Task 1.2: Core Banking Service - Fundação**
