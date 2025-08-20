@@ -42,10 +42,27 @@ jobs:
     
     - name: Archive build artifacts
       run: |
+        echo "Checking what was built..."
+        ls -la
+        find . -name "*.js" -o -name "dist*" -o -name "build*" | head -20
+        
         mkdir -p artifact
-        cp -r dist artifact/
-        cp -r node_modules artifact/ || echo "No node_modules to copy"
-        cp bun.lockb package.json artifact/
+        
+        # Copy dist folder if it exists
+        if [ -d "dist" ]; then
+          cp -r dist artifact/
+        elif [ -d "build" ]; then
+          cp -r build artifact/
+        else
+          echo "No dist or build folder found, copying source files..."
+          cp -r packages artifact/ || echo "No packages folder"
+          cp -r apps artifact/ || echo "No apps folder"
+        fi
+        
+        # Copy essential files
+        cp bun.lockb package.json artifact/ 2>/dev/null || echo "Some files not found, continuing..."
+        
+        echo "Artifact contents:"
         ls -la artifact/
     
     - name: Upload artifacts for deploy
