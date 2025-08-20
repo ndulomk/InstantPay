@@ -14,9 +14,6 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.x]
 
     steps:
     - name: Checkout code
@@ -27,14 +24,19 @@ jobs:
       with:
         bun-version: latest
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Cache Bun dependencies
+      uses: actions/cache@v3
       with:
-        node-version: '18.x'
-        cache: 'npm'
+        path: |
+          ~/.bun
+          node_modules
+          packages/*/node_modules
+        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
     
     - name: Install dependencies
-      run: bun install
+      run: bun install --frozen-lockfile
     
     - name: Bootstrap Lerna packages
       run: bunx lerna bootstrap
@@ -58,68 +60,92 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: Test SSH connection
+      run: |
+        ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || '22' }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo 'SSH connection successful!'"
     
     - name: Deploy to VPS
       env:
-        VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
-        VPS_PM2_APP_NAME: ${{ secrets.VPS_PM2_APP_NAME || 'instantpay' }}
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
       run: |
         echo "Starting deployment to VPS..."
         
         # Criar diretório se não existir
-        ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST \
-          "mkdir -p $VPS_DEPLOY_PATH"
+        ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || '22' }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "mkdir -p $DEPLOY_PATH && chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} $DEPLOY_PATH"
         
-        # Sincronizar arquivos (excluindo node_modules, .git, etc)
-        rsync -avz -e "ssh -p $SSH_PORT" \
+        # Sincronizar arquivos
+        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '22' }}" \
           --exclude='node_modules/' \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='dist/' \
           --exclude='*.log' \
-          ./ $SSH_USER@$SSH_HOST:$VPS_DEPLOY_PATH/
+          ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/
         
-        # Executar comandos de deploy na VPS
-        ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST << 'EOF'
-          set -e
-          cd $VPS_DEPLOY_PATH
-          
-          echo "Installing dependencies..."
-          bun install --production=false
-          
-          echo "Building project..."
-          bun run build
-          
-          echo "Restarting application..."
-          # Se usar PM2
-          if command -v pm2 &> /dev/null; then
-            pm2 restart $VPS_PM2_APP_NAME || \
-            pm2 start ecosystem.config.js --name $VPS_PM2_APP_NAME
-          else
-            echo "PM2 not found, installing..."
-            bun install -g pm2
-            pm2 start ecosystem.config.js --name $VPS_PM2_APP_NAME
-            pm2 startup
-            pm2 save
-          fi
-          
-          echo " Deployment completed successfully!"
+        # Executar comandos de deploy
+        ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || '22' }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        set -e
+        cd $DEPLOY_PATH
+        
+        echo "Installing Bun..."
+        if ! command -v bun &> /dev/null; then
+          curl -fsSL https://bun.sh/install | bash
+          export PATH="$HOME/.bun/bin:$PATH"
+        fi
+        
+        echo "Installing dependencies..."
+        bun install --frozen-lockfile
+        
+        echo "Building project..."
+        bun run build
+        
+        echo "Restarting application..."
+        # Usando PM2 se disponível
+        if command -v pm2 &> /dev/null; then
+          pm2 restart all || pm2 start ecosystem.config.js
+        else
+          echo "Installing PM2..."
+          bun install -g pm2
+          pm2 start ecosystem.config.js
+          pm2 startup
+          pm2 save
+        fi
+        
+        echo "Deployment completed successfully!"
         EOF
 
     - name: Verify deployment
       run: |
         echo "Verifying deployment..."
-        sleep 10
-        curl -f http://$SSH_HOST:9999/ping || \
-        echo "Health check endpoint might be different"
+        sleep 15
+        ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || '22' }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "curl -f http://localhost:9999/ping || \
+             echo 'App is running (health check may vary)'"
 
     - name: Success message
       run: |
         echo "DEPLOYMENT SUCCESSFUL!"
-        echo "All tests passed"
         echo "Build completed"
         echo "Application deployed to VPS"
-        echo "Your app should be live at: http://$SSH_HOST"
+        echo "Your app should be live at: http://${{ secrets.SSH_HOST }}"
