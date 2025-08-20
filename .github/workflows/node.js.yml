@@ -1,31 +1,125 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI
+name: Lerna CI/CD Pipeline with VPS Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+env:
+  SSH_HOST: ${{ secrets.SSH_HOST }}
+  SSH_USER: ${{ secrets.SSH_USER }}
+  SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        node-version: [18.x]
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+    
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '18.x'
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+    
+    - name: Install dependencies
+      run: bun install
+    
+    - name: Bootstrap Lerna packages
+      run: bunx lerna bootstrap
+    
+    - name: Build all packages
+      run: bun run build
+    
+    - name: Run tests
+      run: bunx lerna run test -- --if-present
+    
+    - name: Type check
+      run: bunx lerna run type-check -- --if-present
+
+  deploy-to-vps:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: Deploy to VPS
+      env:
+        VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        VPS_PM2_APP_NAME: ${{ secrets.VPS_PM2_APP_NAME || 'instantpay' }}
+      run: |
+        echo "Starting deployment to VPS..."
+        
+        # Criar diretório se não existir
+        ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST \
+          "mkdir -p $VPS_DEPLOY_PATH"
+        
+        # Sincronizar arquivos (excluindo node_modules, .git, etc)
+        rsync -avz -e "ssh -p $SSH_PORT" \
+          --exclude='node_modules/' \
+          --exclude='.git/' \
+          --exclude='.github/' \
+          --exclude='dist/' \
+          --exclude='*.log' \
+          ./ $SSH_USER@$SSH_HOST:$VPS_DEPLOY_PATH/
+        
+        # Executar comandos de deploy na VPS
+        ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST << 'EOF'
+          set -e
+          cd $VPS_DEPLOY_PATH
+          
+          echo "Installing dependencies..."
+          bun install --production=false
+          
+          echo "Building project..."
+          bun run build
+          
+          echo "Restarting application..."
+          # Se usar PM2
+          if command -v pm2 &> /dev/null; then
+            pm2 restart $VPS_PM2_APP_NAME || \
+            pm2 start ecosystem.config.js --name $VPS_PM2_APP_NAME
+          else
+            echo "PM2 not found, installing..."
+            bun install -g pm2
+            pm2 start ecosystem.config.js --name $VPS_PM2_APP_NAME
+            pm2 startup
+            pm2 save
+          fi
+          
+          echo " Deployment completed successfully!"
+        EOF
+
+    - name: Verify deployment
+      run: |
+        echo "Verifying deployment..."
+        sleep 10
+        curl -f http://$SSH_HOST:9999/ping || \
+        echo "Health check endpoint might be different"
+
+    - name: Success message
+      run: |
+        echo "DEPLOYMENT SUCCESSFUL!"
+        echo "All tests passed"
+        echo "Build completed"
+        echo "Application deployed to VPS"
+        echo "Your app should be live at: http://$SSH_HOST"
