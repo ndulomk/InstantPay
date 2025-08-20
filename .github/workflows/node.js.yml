@@ -95,7 +95,7 @@ jobs:
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && ~/.bun/bin/bun run build"
+            "cd $DEPLOY_PATH && PATH=\$HOME/.bun/bin:\$PATH ~/.bun/bin/bun run build"
     
     - name: Setup PM2 and restart application
       env:
