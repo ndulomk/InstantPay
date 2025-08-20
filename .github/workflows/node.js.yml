@@ -107,13 +107,13 @@ jobs:
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && pm2 restart $PM2_APP_NAME || pm2 start ecosystem.config.js --name $PM2_APP_NAME"
+            "cd $DEPLOY_PATH && PATH=\$HOME/.bun/bin:\$PATH pm2 restart $PM2_APP_NAME || PATH=\$HOME/.bun/bin:\$PATH pm2 start ecosystem.config.js --name $PM2_APP_NAME"
         
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "pm2 startup && pm2 save"
+            "PATH=\$HOME/.bun/bin:\$PATH pm2 startup && PATH=\$HOME/.bun/bin:\$PATH pm2 save"
 
     - name: Verify deployment
       env:
@@ -125,7 +125,7 @@ jobs:
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "pm2 status"
+            "PATH=\$HOME/.bun/bin:\$PATH pm2 status"
         
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
