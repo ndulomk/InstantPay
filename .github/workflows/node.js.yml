@@ -69,78 +69,40 @@ jobs:
             $SSH_USER@$SSH_HOST \
             "echo 'SSH connection successful!'"
     
-    - name: Create deployment directory
+    - name: Deploy via Git Pull
       env:
-        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/opt/InstantPay' }}
       run: |
-        echo "Creating deployment directory..."
+        echo "Deploying via git pull..."
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "mkdir -p $DEPLOY_PATH"
-        
-        ssh -i ~/.ssh/deploy_key \
-            -p $SSH_PORT \
-            -o StrictHostKeyChecking=no \
-            $SSH_USER@$SSH_HOST \
-            "chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH"
-    
-    - name: Sync files to VPS
-      env:
-        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
-      run: |
-        echo "Syncing files to VPS..."
-        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT -o StrictHostKeyChecking=no" \
-          --exclude='node_modules/' \
-          --exclude='.git/' \
-          --exclude='.github/' \
-          --exclude='dist/' \
-          --exclude='*.log' \
-          --exclude='.env*' \
-          ./ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+            "cd $DEPLOY_PATH && git pull origin main"
     
     - name: Install dependencies and build
       env:
-        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/opt/InstantPay' }}
       run: |
         echo "Installing dependencies and building..."
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && echo 'Changed to deploy directory'"
+            "cd $DEPLOY_PATH && ~/.bun/bin/bun install --frozen-lockfile"
         
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
             $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && if ! command -v bun &> /dev/null; then curl -fsSL https://bun.sh/install | bash && export PATH=\"\$HOME/.bun/bin:\$PATH\"; fi"
-        
-        ssh -i ~/.ssh/deploy_key \
-            -p $SSH_PORT \
-            -o StrictHostKeyChecking=no \
-            $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun install --frozen-lockfile"
-        
-        ssh -i ~/.ssh/deploy_key \
-            -p $SSH_PORT \
-            -o StrictHostKeyChecking=no \
-            $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun run build"
+            "cd $DEPLOY_PATH && ~/.bun/bin/bun run build"
     
     - name: Setup PM2 and restart application
       env:
-        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/opt/InstantPay' }}
         PM2_APP_NAME: ${{ secrets.VPS_PM2_APP_NAME || 'instantpay' }}
       run: |
         echo "Setting up PM2 and restarting application..."
-        ssh -i ~/.ssh/deploy_key \
-            -p $SSH_PORT \
-            -o StrictHostKeyChecking=no \
-            $SSH_USER@$SSH_HOST \
-            "cd $DEPLOY_PATH && if ! command -v pm2 &> /dev/null; then export PATH=\"\$HOME/.bun/bin:\$PATH\" && bun install -g pm2; fi"
-        
         ssh -i ~/.ssh/deploy_key \
             -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
@@ -155,7 +117,7 @@ jobs:
 
     - name: Verify deployment
       env:
-        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/var/www/instantpay' }}
+        DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH || '/opt/InstantPay' }}
       run: |
         echo "Verifying deployment..."
         sleep 15
