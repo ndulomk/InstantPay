@@ -40,7 +40,7 @@ jobs:
     
     - name: Build all packages
       run: bun run build
-    
+      
     - name: Type check
       run: bunx lerna run type-check -- --if-present
 
@@ -59,14 +59,14 @@ jobs:
         chmod 700 ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
         chmod 600 ~/.ssh/deploy_key
-        ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts
     
     - name: Test SSH connection
       run: |
         ssh -i ~/.ssh/deploy_key \
-            -p ${{ secrets.SSH_PORT || '22' }} \
+            -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            $SSH_USER@$SSH_HOST \
             "echo 'SSH connection successful!'"
     
     - name: Deploy to VPS
@@ -75,34 +75,34 @@ jobs:
       run: |
         echo "Starting deployment to VPS..."
         
-        # Criar diretório se não existir
+        # Criar diretório se não existir - CORRIGIDO
         ssh -i ~/.ssh/deploy_key \
-            -p ${{ secrets.SSH_PORT || '22' }} \
+            -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p $DEPLOY_PATH && chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} $DEPLOY_PATH"
+            $SSH_USER@$SSH_HOST \
+            "mkdir -p $DEPLOY_PATH && chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH"
         
         # Sincronizar arquivos
-        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '22' }}" \
+        rsync -avz -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
           --exclude='node_modules/' \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='dist/' \
           --exclude='*.log' \
-          ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/
+          ./ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
         
-        # Executar comandos de deploy
+        # Executar comandos de deploy - CORRIGIDO
         ssh -i ~/.ssh/deploy_key \
-            -p ${{ secrets.SSH_PORT || '22' }} \
+            -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            $SSH_USER@$SSH_HOST << EOF
         set -e
         cd $DEPLOY_PATH
         
         echo "Installing Bun..."
         if ! command -v bun &> /dev/null; then
           curl -fsSL https://bun.sh/install | bash
-          export PATH="$HOME/.bun/bin:$PATH"
+          export PATH="\$HOME/.bun/bin:\$PATH"
         fi
         
         echo "Installing dependencies..."
@@ -112,7 +112,6 @@ jobs:
         bun run build
         
         echo "Restarting application..."
-        # Usando PM2 se disponível
         if command -v pm2 &> /dev/null; then
           pm2 restart all || pm2 start ecosystem.config.js
         else
@@ -131,15 +130,14 @@ jobs:
         echo "Verifying deployment..."
         sleep 15
         ssh -i ~/.ssh/deploy_key \
-            -p ${{ secrets.SSH_PORT || '22' }} \
+            -p $SSH_PORT \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "curl -f http://localhost:9999/ping || \
-             echo 'App is running (health check may vary)'"
+            $SSH_USER@$SSH_HOST \
+            "curl -f http://localhost:9999/ping || echo 'App is running (health check may vary)'"
 
     - name: Success message
       run: |
         echo "DEPLOYMENT SUCCESSFUL!"
         echo "Build completed"
         echo "Application deployed to VPS"
-        echo "Your app should be live at: http://${{ secrets.SSH_HOST }}"
+        echo "Your app should be live at: http://$SSH_HOST"
