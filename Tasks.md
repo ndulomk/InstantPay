@@ -15,7 +15,7 @@
 - [ ] 1.2.2 - Implementar Value Objects (Money, AccountId, TransactionId)
 - [ ] 1.2.3 - Criar interfaces de repositório (Repository pattern)
 - [ ] 1.2.4 - Implementar Domain Events pattern
-- [ ] 1.2.5 - Setup conexão com PostgreSQL 
+- [X] 1.2.5 - Setup conexão com PostgreSQL 
 - [ ] 1.2.6 - Criar migrations iniciais
 - [ ] 1.2.7 - Implementar repositórios com RAW SQL
 - [ ] 1.2.8 - Criar seeds para dados de teste
