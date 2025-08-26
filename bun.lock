@@ -36,11 +36,22 @@
         "typescript": "^5.6.3",
       },
     },
+    "packages/config": {
+      "name": "@instantpay/config",
+      "version": "1.0.0",
+      "dependencies": {
+        "dotenv": "^16.3.1",
+        "pg": "^8.11.3",
+      },
+    },
     "packages/core-banking": {
-      "name": "core-banking",
+      "name": "@instantpay/core-banking",
       "version": "0.0.0",
       "dependencies": {
+        "@instantpay/config": "^1.0.0",
+        "dotenv": "^16.3.1",
         "fastify": "^4.28.1",
+        "pg": "^8.11.3",
       },
       "devDependencies": {
         "@types/node": "^22.5.5",
@@ -223,6 +234,10 @@
     "@hutson/parse-repository-url": ["@hutson/parse-repository-url@3.0.2", "", {}, "sha512-H9XAx3hc0BQHY6l+IFSWHDySypcXsvsuLhgYLUGywmJ5pswRVQJUHpOsobnLYp2ZUaUlKiKDrgWWhosOwAEM8Q=="],
 
     "@inquirer/external-editor": ["@inquirer/external-editor@1.0.1", "", { "dependencies": { "chardet": "^2.1.0", "iconv-lite": "^0.6.3" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-Oau4yL24d2B5IL4ma4UpbQigkVhzPDXLoqy1ggK4gnHg/stmkffJE4oOXHXF3uz0UEpywG68KcyXsyYpA1Re/Q=="],
+
+    "@instantpay/config": ["@instantpay/config@workspace:packages/config"],
+
+    "@instantpay/core-banking": ["@instantpay/core-banking@workspace:packages/core-banking"],
 
     "@isaacs/cliui": ["@isaacs/cliui@8.0.2", "", { "dependencies": { "string-width": "^5.1.2", "string-width-cjs": "npm:string-width@^4.2.0", "strip-ansi": "^7.0.1", "strip-ansi-cjs": "npm:strip-ansi@^6.0.1", "wrap-ansi": "^8.1.0", "wrap-ansi-cjs": "npm:wrap-ansi@^7.0.0" } }, "sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA=="],
 
@@ -527,8 +542,6 @@
     "conventional-recommended-bump": ["conventional-recommended-bump@7.0.1", "", { "dependencies": { "concat-stream": "^2.0.0", "conventional-changelog-preset-loader": "^3.0.0", "conventional-commits-filter": "^3.0.0", "conventional-commits-parser": "^4.0.0", "git-raw-commits": "^3.0.0", "git-semver-tags": "^5.0.0", "meow": "^8.1.2" }, "bin": "cli.js" }, "sha512-Ft79FF4SlOFvX4PkwFDRnaNiIVX7YbmqGU0RwccUaiGvgp3S0a8ipR2/Qxk31vclDNM+GSdJOVs2KrsUCjblVA=="],
 
     "cookie": ["cookie@0.7.2", "", {}, "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w=="],
-
-    "core-banking": ["core-banking@workspace:packages/core-banking"],
 
     "core-util-is": ["core-util-is@1.0.3", "", {}, "sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ=="],
 
