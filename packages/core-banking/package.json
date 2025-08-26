@@ -1,5 +1,5 @@
 {
-  "name": "core-banking",
+  "name": "@instantpay/core-banking",
   "version": "0.0.0",
   "description": "principal service",
   "keywords": [
@@ -17,7 +17,10 @@
     "test": "bun test"
   },
   "dependencies": {
-    "fastify": "^4.28.1"
+    "fastify": "^4.28.1",
+    "@instantpay/config": "^1.0.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
