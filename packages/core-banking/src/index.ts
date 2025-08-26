@@ -1,12 +1,20 @@
 import fastify from "fastify";
+import { bankController } from "./bank/controllers/bank";
 
-const server = fastify()
+const server = fastify({logger:true})
 
 server.get('/ping', async(request, reply)=>{
   return 'pong\n'
 })
-server.get('/hey', async(request, reply)=>{
-  return "hey"
+
+server.post("/banks", bankController.create)
+
+server.setErrorHandler(( error, request, reply ) =>{
+  server.log.error(error);
+  reply.status(500).send({ 
+    status: 'error',
+    message: 'Internal Server Error'  
+  })
 })
 
 server.listen({ port: 9999 }, (err, address)=>{
