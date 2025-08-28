@@ -1,4 +1,4 @@
-export interface Bank {
+export interface BankInterface {
   id: number;
   bankName: string;
   bankCode: string;
@@ -10,5 +10,17 @@ export interface Bank {
 
 
 export interface CreateBankRequest {
-  Body: Bank;
+  Body: BankInterface;
+}
+
+export interface Pagination {
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
+}
+
+export interface GetAllRequest {
+  page: number;
+  limit: number;
 }

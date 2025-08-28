@@ -1,13 +1,15 @@
 import fastify from "fastify";
-import { bankController } from "./bank/controllers/bank";
-
+import { bankRoutes } from "./bank/routes/bank";
 const server = fastify({logger:true})
 
 server.get('/ping', async(request, reply)=>{
   return 'pong\n'
 })
 
-server.post("/banks", bankController.create)
+
+const API_PREFIX = '/api/v1'
+server.register(bankRoutes, { prefix: API_PREFIX + '/banks' })
+
 
 server.setErrorHandler(( error, request, reply ) =>{
   server.log.error(error);

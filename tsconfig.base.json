@@ -11,10 +11,11 @@
 
     "baseUrl": ".", 
     "paths": {
-      "@/*": ["packages/*/src"],
+      "@/*": ["packages/*"],
       "@/config/*": ["packages/config/src/*"],
       "@/core-banking/*": ["packages/core-banking/src/*"],
-      "@/fraud-detection/*": ["packages/fraud-detection/src/*"]
+      "@/fraud-detection/*": ["packages/fraud-detection/src/*"],
+      "@/utils/*": ["packages/utils/src/*"]
     }
   }
 }
