@@ -1,16 +1,17 @@
-class DomainException extends Error {
+export class DomainException extends Error {
   code: string;
   component: string;
   timestamp: string;
+
   constructor(message: string, code: string = "DOMAIN_ERROR", component?: string) {
     super(message);
     this.name = "DomainException";
     this.code = code;
     this.component = component || 'Unknown';
-    this.timestamp = new Date().toISOString()
+    this.timestamp = new Date().toISOString();
   }
 
-  toJSON(){
+  toJSON() {
     return {
       statusCode: this.getStatusCode(),
       error: this.name,
@@ -18,20 +19,32 @@ class DomainException extends Error {
       code: this.code,
       component: this.component,
       timestamp: this.timestamp
-    }
+    };
   }
-  getStatusCode():number{
-    return 500
+
+  getStatusCode(): number {
+    return 500;
   }
 }
 
 export class ValidationException extends DomainException {
-  constructor(message: string, component?: string){
+  constructor(message: string, component?: string) {
     super(message, "VALIDATION_ERROR", component);
-    this.name = "ValidationException"
+    this.name = "ValidationException";
   }
 
-  getStatusCode():number{
-    return 400
+  getStatusCode(): number {
+    return 400;
+  }
+}
+
+export class NotFoundException extends DomainException {
+  constructor(message: string, component?: string) {
+    super(message, "NOTFOUND_ERROR", component);
+    this.name = "NotFoundException";
+  }
+
+  getStatusCode(): number {
+    return 404;
   }
 }

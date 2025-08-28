@@ -5,7 +5,8 @@
     "rootDir": "src"
   },
   "references": [
-    { "path": "../config" }
+    { "path": "../config" },
+    { "path": "../utils" } 
   ],
   "include": ["src/**/*"]
 }
