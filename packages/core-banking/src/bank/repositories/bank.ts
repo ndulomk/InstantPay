@@ -32,6 +32,6 @@ export const bankRepository = {
       data,
       total
     }
-  }
+  },
 
 };
