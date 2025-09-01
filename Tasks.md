@@ -6,7 +6,7 @@
 - [ ] 1.1.5 - Configurar Docker Compose para desenvolvimento local
 - [ ] 1.1.6 - Setup PostgreSQL + Redis containers
 - [ ] 1.1.7 - Configurar variáveis de ambiente (.env files)
-- [ ] 1.1.8 - Setup Winston logging estruturado
+- [X] 1.1.8 - Setup Winston logging estruturado
 - [X] 1.1.9 - Configurar GitHub Actions básico
 - [X] 1.1.10 - Criar documentação README inicial
 
