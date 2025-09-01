@@ -8,7 +8,7 @@
 - [ ] 1.1.7 - Configurar variáveis de ambiente (.env files)
 - [X] 1.1.8 - Setup Winston logging estruturado
 - [X] 1.1.9 - Configurar GitHub Actions básico
-- [ ] 1.1.10 - Criar documentação README inicial
+- [X] 1.1.10 - Criar documentação README inicial
 
 #### **Task 1.2: Core Banking Service - Fundação**
 - [ ] 1.2.1 - Criar domain entities (Account, Customer, Transaction)
