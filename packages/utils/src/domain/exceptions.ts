@@ -34,7 +34,7 @@ export class ValidationException extends DomainException {
   }
 
   getStatusCode(): number {
-    return 400;
+    return 422; 
   }
 }
 
@@ -46,5 +46,67 @@ export class NotFoundException extends DomainException {
 
   getStatusCode(): number {
     return 404;
+  }
+}
+
+export class UnauthorizedException extends DomainException {
+  constructor(message: string = "Unauthorized", component?: string) {
+    super(message, "UNAUTHORIZED_ERROR", component);
+    this.name = "UnauthorizedException";
+  }
+
+  getStatusCode(): number {
+    return 401;
+  }
+}
+
+export class ForbiddenException extends DomainException {
+  constructor(message: string = "Forbidden", component?: string) {
+    super(message, "FORBIDDEN_ERROR", component);
+    this.name = "ForbiddenException";
+  }
+
+  getStatusCode(): number {
+    return 403;
+  }
+}
+
+export class BadRequestException extends DomainException {
+  constructor(message: string, component?: string) {
+    super(message, "BAD_REQUEST_ERROR", component);
+    this.name = "BadRequestException";
+  }
+
+  getStatusCode(): number {
+    return 400;
+  }
+}
+
+export class ConflictException extends DomainException {
+  constructor(message: string, component?: string) {
+    super(message, "CONFLICT_ERROR", component);
+    this.name = "ConflictException";
+  }
+
+  getStatusCode(): number {
+    return 409;
+  }
+}
+
+export class DatabaseException extends DomainException {
+  nativeCode?: string;
+
+  constructor(
+    message: string,
+    component?: string,
+    nativeCode?: string | null
+  ) {
+    super(message, "DATABASE_ERROR", component);
+    this.name = "DatabaseException";
+    this.nativeCode = nativeCode || undefined;
+  }
+
+  getStatusCode(): number {
+    return 500;
   }
 }

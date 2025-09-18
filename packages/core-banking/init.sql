@@ -1,5 +1,25 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE OR REPLACE FUNCTION uuid_generate_v7()
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    unix_ts_ms bigint;
+    uuid_bytes bytea;
+BEGIN
+    unix_ts_ms := (extract(epoch from clock_timestamp()) * 1000)::bigint;
+    uuid_bytes := overlay(gen_random_bytes(16)
+        placing substring(int8send(unix_ts_ms), 3, 6)
+        from 1 for 6);
+    uuid_bytes := set_byte(uuid_bytes, 6, (get_byte(uuid_bytes, 6) & 15) | 112); 
+    uuid_bytes := set_byte(uuid_bytes, 8, (get_byte(uuid_bytes, 8) & 63) | 128);
+    return encode(uuid_bytes, 'hex')::uuid;
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS banks (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   bank_name TEXT NOT NULL,
   bank_code TEXT NOT NULL,
   status INTEGER DEFAULT 1 CHECK (status IN(0, 1)), -- 0=inativo, 1=ativo
@@ -9,7 +29,7 @@ CREATE TABLE IF NOT EXISTS banks (
 );
 
 CREATE TABLE IF NOT EXISTS users(
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   username TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   phone TEXT NOT NULL UNIQUE,
@@ -24,12 +44,12 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
-  account_id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  bank_id INTEGER NOT NULL REFERENCES banks(id) ON DELETE RESTRICT,
+  account_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE RESTRICT,
   account_number TEXT NOT NULL UNIQUE,
   account_type TEXT NOT NULL, -- (account_type IN ('CORRENTE', 'POUPANCA', 'PRAZO', 'EMPRESARIAL'))
-  balance NUMERIC(15,2) DEFAULT 0.00, -- CHECK (balance >= -overdraft_limit)
+  balance NUMERIC(15,2) DEFAULT 0.00,
   available_balance NUMERIC(15,2) DEFAULT 0.00,
   blocked_amount NUMERIC(15,2) DEFAULT 0.00,
   currency_code CHAR(3) DEFAULT 'AOA',
@@ -39,13 +59,9 @@ CREATE TABLE IF NOT EXISTS accounts (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-/*CHECK (transaction_type IN (
-        'CASH_DEPOSIT', 'CASH_WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT',
-        'INTERBANK_IN', 'INTERBANK_OUT', 'PAYMENT', 'REVERSAL', 'FEE_CHARGE'
-    )),  */
 CREATE TABLE IF NOT EXISTS transactions (
-  transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  account_id INTEGER NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT,
+  transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT,
   amount NUMERIC(15,2) NOT NULL,
   currency_code CHAR(3) DEFAULT 'AOA',
   transaction_type TEXT NOT NULL,
@@ -61,9 +77,9 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 CREATE TABLE IF NOT EXISTS accounting_entries (
-  entry_id SERIAL PRIMARY KEY,
+  entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
-  account_id INTEGER NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT, 
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT, 
   debit_amount NUMERIC(15,2) DEFAULT 0.00,
   credit_amount NUMERIC(15,2) DEFAULT 0.00,
   entry_date DATE DEFAULT CURRENT_DATE,
@@ -71,10 +87,8 @@ CREATE TABLE IF NOT EXISTS accounting_entries (
 );
 
 CREATE TABLE IF NOT EXISTS bank_reserves (
-    id SERIAL PRIMARY KEY,
-    bank_id INTEGER NOT NULL REFERENCES banks(id),
-    
-    -- CÁLCULOS DE RESERVA
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    bank_id UUID NOT NULL REFERENCES banks(id),
     total_deposits NUMERIC(18,2) NOT NULL,
     required_reserve NUMERIC(18,2) NOT NULL,
     actual_reserve NUMERIC(18,2) NOT NULL,
@@ -82,22 +96,15 @@ CREATE TABLE IF NOT EXISTS bank_reserves (
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
-    id SERIAL PRIMARY KEY,
-    -- IDENTIFICAÇÃO
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     table_name VARCHAR(50) NOT NULL,
-    record_id VARCHAR(50) NOT NULL,
+    record_id UUID NOT NULL,
     operation VARCHAR(10) NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
-    
-    -- DADOS
     old_values JSONB,
     new_values JSONB,
-    
-    -- RASTREABILIDADE
-    user_id INTEGER REFERENCES users(id),
+    user_id UUID REFERENCES users(id),
     ip_address INET,
     user_agent TEXT,
-    
-    -- TIMESTAMP IMUTÁVEL
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -123,6 +130,3 @@ CREATE INDEX idx_transactions_amount ON transactions(amount);
 CREATE INDEX idx_audit_table ON audit_log(table_name);
 CREATE INDEX idx_audit_record ON audit_log(record_id);
 CREATE INDEX idx_audit_date ON audit_log(created_at);
-
-
-

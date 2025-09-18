@@ -1,7 +1,7 @@
 import fastify from "fastify";
-import { bankRoutes } from "./bank/routes/bank";
 import { loggerPlugin } from "@instantpay/utils/src/logger";
 import db from "@instantpay/config/src/database";
+import { BankRoutes } from "./modules/banks/routes/bank.routes";
 
 const server = fastify({
   logger: false, 
@@ -67,7 +67,7 @@ server.get('/health/database', async (request, reply) => {
 
 const API_PREFIX = '/api/v1';
 
-server.register(bankRoutes, { prefix: API_PREFIX + '/banks' });
+server.register(BankRoutes, { prefix: API_PREFIX + '/banks' });
 
 server.setErrorHandler(async (error, request, reply) => {
   
