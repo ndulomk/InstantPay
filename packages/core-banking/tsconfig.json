@@ -8,5 +8,5 @@
     { "path": "../config" },
     { "path": "../utils" } 
   ],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../types/fastify.d.ts"]
 }

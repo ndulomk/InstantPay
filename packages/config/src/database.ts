@@ -16,7 +16,7 @@ interface DatabaseConfig {
   connectionTimeoutMillis?: number;
 }
 
-interface Database {
+export interface Database {
   query: (text: string, params?: any[]) => Promise<QueryResult>;
   getClient: () => Promise<PoolClient>;
   pool: Pool;
