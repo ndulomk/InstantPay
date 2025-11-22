@@ -33,6 +33,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "fastify-plugin": "^5.0.1",
     "husky": "^9.1.7",
+    "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "lint-staged": "^16.1.5",
     "pg": "^8.16.3",

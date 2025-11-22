@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
-  account_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE RESTRICT,
   account_number TEXT NOT NULL UNIQUE,
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 CREATE TABLE IF NOT EXISTS transactions (
   transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT,
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   amount NUMERIC(15,2) NOT NULL,
   currency_code CHAR(3) DEFAULT 'AOA',
   transaction_type TEXT NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS accounting_entries (
   entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
   transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
-  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE RESTRICT, 
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT, 
   debit_amount NUMERIC(15,2) DEFAULT 0.00,
   credit_amount NUMERIC(15,2) DEFAULT 0.00,
   entry_date DATE DEFAULT CURRENT_DATE,

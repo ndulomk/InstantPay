@@ -10,3 +10,5 @@ export {
   SystemLogEntry, 
   DatabaseLogEntry 
 } from './logger/types';
+
+export * from "./result"

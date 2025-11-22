@@ -220,7 +220,7 @@ const databaseManager = new DatabaseManager();
 const db: Database = {
   query: (text: string, params?: any[]) => databaseManager.query(text, params),
   getClient: () => databaseManager.getClient(),
-  pool: databaseManager['pool'], // Access private property for backwards compatibility
+  pool: databaseManager['pool'],
   logger: databaseManager['logger'],
   close: () => databaseManager.close()
 };
