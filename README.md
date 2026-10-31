@@ -7,9 +7,10 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | --- | --- |
 | `@instantpay/core-banking` | Implementado: auth, users, banks, accounts, transactions, ledger, holds, limits, reserves e audit |
 | `@instantpay/gateway-api` | Implementado: API keys, rate limiting, proxy e request logs |
+| `@instantpay/payment-processor` | Implementado: pagamentos, reembolsos, idempotência e webhooks |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
-| `payment-processor`, `fraud-detection`, `notification-service`, `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
+| `fraud-detection`, `notification-service`, `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
 
 ## Arranque rápido — core-banking
 
@@ -39,3 +40,16 @@ npm run start --workspace @instantpay/gateway-api
 O gateway escuta em `http://localhost:9998` e encaminha `/api/v1/*` para o
 core-banking. Documentação:
 [`packages/gateway-api/README.md`](packages/gateway-api/README.md).
+
+## Arranque rápido — payment-processor
+
+```bash
+psql "$DATABASE_URL" -f packages/payment-processor/init.sql
+cp packages/payment-processor/.env.example packages/payment-processor/.env
+
+npm run build --workspace @instantpay/payment-processor
+npm run start --workspace @instantpay/payment-processor
+```
+
+O processador escuta em `http://localhost:9997`. Documentação:
+[`packages/payment-processor/README.md`](packages/payment-processor/README.md).
