@@ -5,7 +5,7 @@ export interface LogEntry {
   service: string;
   correlationId?:string;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ErrorLogEntry extends LogEntry {
@@ -13,7 +13,7 @@ export interface ErrorLogEntry extends LogEntry {
   errorMessage: string;
   stack?: string;
   errorCode?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface RequestLogEntry extends LogEntry {
@@ -21,7 +21,7 @@ export interface RequestLogEntry extends LogEntry {
   method: string;
   url: string;
   headers: Record<string, string>
-  body?:any;
+  body?: unknown;
   ip: string;
   userAgent?: string;
 }
@@ -39,7 +39,7 @@ export interface ErrorLogEntry extends LogEntry {
   errorMessage: string;
   stack?: string;
   errorCode?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface SystemLogEntry extends LogEntry {

@@ -1,9 +1,9 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { InstantPayLogger } from './InstantPayLogger';
+import { InstantPayLogger } from './InstantPayLogger.js';
 import { v4 as uuidv4 } from 'uuid';
 
-import { DomainException, ValidationException, NotFoundException } from '../domain/exceptions';
+import { DomainException, ValidationException, NotFoundException } from '../domain/exceptions.js';
 
 declare module 'fastify' {
   interface FastifyInstance {

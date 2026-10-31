@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import { DatabaseLogEntry, ErrorLogEntry, RequestLogEntry, ResponseLogEntry, SystemLogEntry } from './types';
+import { DatabaseLogEntry, ErrorLogEntry, RequestLogEntry, ResponseLogEntry, SystemLogEntry } from './types.js';
 
 export class LoggerEventEmitter extends EventEmitter {
   constructor() {
