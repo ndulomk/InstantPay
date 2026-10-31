@@ -1,10 +1,11 @@
-import { Pool, QueryResult, PoolClient } from 'pg';
+import { Pool, type QueryResult, type QueryResultRow, type PoolClient } from 'pg';
 import dotenv from 'dotenv';
-import { InstantPayLogger } from '@instantpay/utils/src/logger';
+import { InstantPayLogger } from '@instantpay/utils';
 
 dotenv.config();
 
 interface DatabaseConfig {
+  connectionString?: string;
   user?: string;
   host?: string;
   password?: string;
@@ -17,7 +18,10 @@ interface DatabaseConfig {
 }
 
 export interface Database {
-  query: (text: string, params?: any[]) => Promise<QueryResult>;
+  query: <T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    params?: unknown[]
+  ) => Promise<QueryResult<T>>;
   getClient: () => Promise<PoolClient>;
   pool: Pool;
   logger: InstantPayLogger;
@@ -25,112 +29,107 @@ export interface Database {
 }
 
 class DatabaseManager {
-  private pool: Pool;
-  private logger: InstantPayLogger;
-  private isConnected: boolean = false;
+  public readonly pool: Pool;
+  public readonly logger: InstantPayLogger;
+  private isConnected = false;
 
   constructor() {
     this.logger = new InstantPayLogger('database-service');
     this.pool = this.createPool();
     this.setupEventHandlers();
-    this.testConnection();
+    void this.testConnection();
   }
 
   private createPool(): Pool {
     const poolConfig: DatabaseConfig = {
+      connectionString: process.env.DATABASE_URL,
       user: process.env.DB_USER,
       host: process.env.DB_HOST,
       database: process.env.DB_DATABASE,
       password: process.env.DB_PASSWORD,
-      port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+      port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
       ssl: process.env.DB_SSL === 'true',
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+      max: 20,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
     };
 
     this.logger.info('Creating database connection pool', {
       host: poolConfig.host,
       database: poolConfig.database,
       port: poolConfig.port,
-      ssl: poolConfig.ssl
+      ssl: poolConfig.ssl,
+      usesConnectionString: Boolean(poolConfig.connectionString),
     });
 
     return new Pool(poolConfig);
   }
 
   private setupEventHandlers(): void {
-    this.pool.on('connect', (client: PoolClient) => {
+    this.pool.on('connect', () => {
       this.isConnected = true;
-      this.logger.logDatabase('CONNECT', 0, process.env.DB_DATABASE || 'unknown');
-      this.logger.info('Client connected to PostgreSQL database', {
-        totalCount: this.pool.totalCount,
-        idleCount: this.pool.idleCount,
-        waitingCount: this.pool.waitingCount
-      });
+      this.logger.logDatabase(
+        'CONNECT',
+        0,
+        process.env.DB_DATABASE || 'unknown'
+      );
+      this.logger.info('Client connected to PostgreSQL database', this.poolStats());
     });
 
-    this.pool.on('acquire', (client: PoolClient) => {
-      this.logger.info('Client acquired from pool', {
-        totalCount: this.pool.totalCount,
-        idleCount: this.pool.idleCount,
-        waitingCount: this.pool.waitingCount
-      });
+    this.pool.on('acquire', () => {
+      this.logger.info('Client acquired from pool', this.poolStats());
     });
 
-    this.pool.on('release', (err: Error | undefined, client: PoolClient) => {
+    this.pool.on('release', (err: Error | undefined) => {
       if (err) {
         this.logger.error('Error releasing client back to pool', err);
       }
     });
 
-    this.pool.on('remove', (client: PoolClient) => {
-      this.logger.info('Client removed from pool', {
-        totalCount: this.pool.totalCount,
-        idleCount: this.pool.idleCount,
-        waitingCount: this.pool.waitingCount
-      });
+    this.pool.on('remove', () => {
+      this.logger.info('Client removed from pool', this.poolStats());
     });
 
     this.pool.on('error', (err: Error) => {
       this.isConnected = false;
-      this.logger.error('Unexpected error on idle client', err, {
-        totalCount: this.pool.totalCount,
-        idleCount: this.pool.idleCount,
-        waitingCount: this.pool.waitingCount
-      });
-      
-      // Don't exit the process, let the application handle reconnection
-      // process.exit(-1);
+      this.logger.error('Unexpected error on idle client', err, this.poolStats());
     });
+  }
+
+  private poolStats(): Record<string, number> {
+    return {
+      totalCount: this.pool.totalCount,
+      idleCount: this.pool.idleCount,
+      waitingCount: this.pool.waitingCount,
+    };
   }
 
   private async testConnection(): Promise<void> {
     try {
       const startTime = Date.now();
-      const result = await this.pool.query('SELECT NOW(), version()');
+      const result = await this.pool.query('SELECT NOW() AS now, version() AS version');
       const queryTime = Date.now() - startTime;
-      
-      this.logger.logDatabase('SELECT', queryTime, process.env.DB_DATABASE || 'unknown', 'SELECT NOW(), version()', 1);
+      const row = result.rows[0] as { now: Date; version: string } | undefined;
+
       this.logger.info('Initial database connection test succeeded', {
-        timestamp: result.rows[0].now,
-        version: result.rows[0].version,
-        queryTime: `${queryTime}ms`
+        timestamp: row?.now,
+        version: row?.version,
+        queryTime: `${queryTime}ms`,
       });
     } catch (err) {
       this.logger.error('Error during initial database connection test', err as Error);
-      throw err;
     }
   }
 
-  public async query(text: string, params?: any[]): Promise<QueryResult> {
+  public async query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    params?: unknown[]
+  ): Promise<QueryResult<T>> {
     const startTime = Date.now();
-    let result: QueryResult;
-    let operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CONNECT' | 'DISCONNECT' = 'SELECT';
+    let operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' = 'SELECT';
 
     try {
-      // Determine operation type
-      const queryType = text.trim().split(' ')[0].toUpperCase();
+      const queryType = text.trim().split(/\s+/)[0]?.toUpperCase();
       switch (queryType) {
         case 'INSERT':
           operation = 'INSERT';
@@ -145,7 +144,7 @@ class DatabaseManager {
           operation = 'SELECT';
       }
 
-      result = await this.pool.query(text, params);
+      const result = await this.pool.query<T>(text, params);
       const queryTime = Date.now() - startTime;
 
       this.logger.logDatabase(
@@ -153,39 +152,31 @@ class DatabaseManager {
         queryTime,
         process.env.DB_DATABASE || 'unknown',
         text,
-        result.rowCount || 0
+        result.rowCount ?? 0
       );
 
-      // Log slow queries
-      if (queryTime > 1000) {
+      if (queryTime > 1_000) {
         this.logger.warn('Slow database query detected', {
           query: text,
-          params,
           queryTime: `${queryTime}ms`,
-          rowCount: result.rowCount
+          rowCount: result.rowCount,
         });
       }
 
       return result;
     } catch (error) {
-      const queryTime = Date.now() - startTime;
-      
       this.logger.error('Database query error', error as Error, {
         query: text,
-        params,
-        queryTime: `${queryTime}ms`,
-        operation
+        queryTime: `${Date.now() - startTime}ms`,
+        operation,
       });
-      
       throw error;
     }
   }
 
   public async getClient(): Promise<PoolClient> {
     try {
-      const client = await this.pool.connect();
-      this.logger.info('Database client acquired from pool');
-      return client;
+      return await this.pool.connect();
     } catch (error) {
       this.logger.error('Failed to acquire database client from pool', error as Error);
       throw error;
@@ -206,23 +197,20 @@ class DatabaseManager {
 
   public getPoolStats() {
     return {
-      totalCount: this.pool.totalCount,
-      idleCount: this.pool.idleCount,
-      waitingCount: this.pool.waitingCount,
-      isConnected: this.isConnected
+      ...this.poolStats(),
+      isConnected: this.isConnected,
     };
   }
 }
 
-// Create singleton instance
 const databaseManager = new DatabaseManager();
 
 const db: Database = {
-  query: (text: string, params?: any[]) => databaseManager.query(text, params),
+  query: (text, params) => databaseManager.query(text, params),
   getClient: () => databaseManager.getClient(),
-  pool: databaseManager['pool'], // Access private property for backwards compatibility
-  logger: databaseManager['logger'],
-  close: () => databaseManager.close()
+  pool: databaseManager.pool,
+  logger: databaseManager.logger,
+  close: () => databaseManager.close(),
 };
 
 export default db;

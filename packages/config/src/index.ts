@@ -1,3 +1,3 @@
-export { default as database } from './database';
+export { default as database } from './database.js';
 
-export { Database } from './database'
+export type { Database } from './database.js';
