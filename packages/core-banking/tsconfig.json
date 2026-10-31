@@ -5,8 +5,14 @@
     "rootDir": "src"
   },
   "references": [
-    { "path": "../config" },
-    { "path": "../utils" } 
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../utils"
+    }
   ],
-  "include": ["src/**/*", "../types/fastify.d.ts"]
+  "include": [
+    "src/**/*"
+  ]
 }
