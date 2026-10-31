@@ -37,6 +37,58 @@ type ErrorPayload = {
   operation?: string;
   table?: string;
   service?: string;
+  retryAfterSeconds?: number;
+  limit?: number;
+};
+
+/**
+ * Converte um AppError no payload HTTP padrão.
+ * Exportado para guards e proxies que respondem sem passar pelo `handler`.
+ */
+export const buildErrorPayload = (appError: AppError): ErrorPayload => {
+  const errorPayload: ErrorPayload = {
+    type: appError.type,
+    message: appError.message,
+    timestamp: appError.timestamp,
+    component: appError.component,
+  };
+
+  switch (appError.type) {
+    case 'VALIDATION_ERROR':
+      errorPayload.errors = appError.errors;
+      break;
+    case 'NOT_FOUND':
+      errorPayload.resource = appError.resource;
+      errorPayload.resourceId = appError.resourceId;
+      break;
+    case 'UNAUTHORIZED':
+      errorPayload.reason = appError.reason;
+      break;
+    case 'FORBIDDEN':
+      errorPayload.requiredPermission = appError.requiredPermission;
+      break;
+    case 'CONFLICT':
+      errorPayload.conflictingField = appError.conflictingField;
+      errorPayload.existingValue = appError.existingValue;
+      break;
+    case 'BUSINESS_ERROR':
+      errorPayload.code = appError.code;
+      break;
+    case 'TOO_MANY_REQUESTS':
+      errorPayload.retryAfterSeconds = appError.retryAfterSeconds;
+      errorPayload.limit = appError.limit;
+      break;
+    case 'DATABASE_ERROR':
+      errorPayload.operation = appError.operation;
+      errorPayload.table = appError.table;
+      break;
+    case 'EXTERNAL_SERVICE_ERROR':
+      errorPayload.service = appError.service;
+      errorPayload.operation = appError.operation;
+      break;
+  }
+
+  return errorPayload;
 };
 
 export const handler = <
@@ -92,47 +144,9 @@ export const handler = <
       }
 
       if (reply.sent) return;
-      const errorPayload: ErrorPayload = {
-        type: appError.type,
-        message: appError.message,
-        timestamp: appError.timestamp,
-        component: appError.component,
-      };
-
-      switch (appError.type) {
-        case 'VALIDATION_ERROR':
-          errorPayload.errors = appError.errors;
-          break;
-        case 'NOT_FOUND':
-          errorPayload.resource = appError.resource;
-          errorPayload.resourceId = appError.resourceId;
-          break;
-        case 'UNAUTHORIZED':
-          errorPayload.reason = appError.reason;
-          break;
-        case 'FORBIDDEN':
-          errorPayload.requiredPermission = appError.requiredPermission;
-          break;
-        case 'CONFLICT':
-          errorPayload.conflictingField = appError.conflictingField;
-          errorPayload.existingValue = appError.existingValue;
-          break;
-        case 'BUSINESS_ERROR':
-          errorPayload.code = appError.code;
-          break;
-        case 'DATABASE_ERROR':
-          errorPayload.operation = appError.operation;
-          errorPayload.table = appError.table;
-          break;
-        case 'EXTERNAL_SERVICE_ERROR':
-          errorPayload.service = appError.service;
-          errorPayload.operation = appError.operation;
-          break;
-      }
-
       reply.status(appError.statusCode).send({
         status: 'error',
-        error: errorPayload,
+        error: buildErrorPayload(appError),
       });
     } catch (unexpectedError) {
       request.log.error(

@@ -72,6 +72,16 @@ export type BusinessError = BaseAppError & {
 };
 
 /**
+ * Limite de pedidos excedido (429).
+ * Usado por gateways e endpoints com rate limiting.
+ */
+export type TooManyRequestsError = BaseAppError & {
+  type: 'TOO_MANY_REQUESTS';
+  retryAfterSeconds?: number;
+  limit?: number;
+};
+
+/**
  * Erro de infraestrutura de banco de dados (500).
  * Contém detalhes da operação para debug.
  */
@@ -115,6 +125,7 @@ export type AppError =
   | ForbiddenError
   | ConflictError
   | BusinessError
+  | TooManyRequestsError
   | DatabaseError
   | ExternalServiceError
   | InternalServerError;

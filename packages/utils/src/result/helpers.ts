@@ -81,6 +81,8 @@ export const matchError = <T>(
       return handlers.CONFLICT ? handlers.CONFLICT(error) : (handlers.default!(error));
     case 'BUSINESS_ERROR':
       return handlers.BUSINESS_ERROR ? handlers.BUSINESS_ERROR(error) : (handlers.default!(error));
+    case 'TOO_MANY_REQUESTS':
+      return handlers.TOO_MANY_REQUESTS ? handlers.TOO_MANY_REQUESTS(error) : (handlers.default!(error));
     case 'DATABASE_ERROR':
       return handlers.DATABASE_ERROR ? handlers.DATABASE_ERROR(error) : (handlers.default!(error));
     case 'EXTERNAL_SERVICE_ERROR':

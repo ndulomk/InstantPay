@@ -20,6 +20,7 @@ export {
   ForbiddenError,
   InternalServerError,
   NotFoundError,
+  TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
 } from './result/errors.js';
@@ -38,5 +39,6 @@ export {
 
 export {
   handler,
+  buildErrorPayload,
   ApiResponse
 } from './http/handler.js'

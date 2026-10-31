@@ -93,6 +93,31 @@ export class ConflictException extends DomainException {
   }
 }
 
+export class TooManyRequestsException extends DomainException {
+  retryAfterSeconds?: number;
+
+  constructor(
+    message: string = "Too Many Requests",
+    component?: string,
+    retryAfterSeconds?: number
+  ) {
+    super(message, "TOO_MANY_REQUESTS", component);
+    this.name = "TooManyRequestsException";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+
+  getStatusCode(): number {
+    return 429;
+  }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      retryAfterSeconds: this.retryAfterSeconds,
+    };
+  }
+}
+
 export class DatabaseException extends DomainException {
   nativeCode?: string;
 

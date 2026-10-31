@@ -6,6 +6,7 @@ import {
   ForbiddenError, 
   ConflictError, 
   BusinessError, 
+  TooManyRequestsError,
   DatabaseError, 
   ExternalServiceError, 
   InternalServerError 
@@ -125,6 +126,27 @@ export const ErrorFactory = {
     message,
     code,
     component
+  }),
+
+  /**
+   * Cria um erro de limite de pedidos excedido (429).
+   * @param {string} message - Mensagem do erro.
+   * @param {number} [retryAfterSeconds] - Segundos até o cliente poder tentar novamente.
+   * @param {number} [limit] - Limite configurado para a janela.
+   * @param {string} [component] - Nome do componente onde ocorreu.
+   */
+  tooManyRequests: (
+    message: string,
+    retryAfterSeconds?: number,
+    limit?: number,
+    component?: string
+  ) => createError<TooManyRequestsError>({
+    type: 'TOO_MANY_REQUESTS',
+    statusCode: 429,
+    message,
+    retryAfterSeconds,
+    limit,
+    component,
   }),
 
   /**
