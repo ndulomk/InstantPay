@@ -1,122 +1,189 @@
-import fastify from "fastify";
-import { loggerPlugin } from "@instantpay/utils/src/logger";
-import db from "@instantpay/config/src/database";
-import { BankRoutes } from "./modules/banks/routes/bank.routes";
+import './config/env.js';
+import Fastify from 'fastify';
+import { database } from '@instantpay/config';
+import { loggerPlugin } from '@instantpay/utils';
 
-const server = fastify({
-  logger: false, 
+import { buildContainer } from './container.js';
+import { authRoutes } from './modules/auth/infrastructure/http/routes/auth.routes.js';
+import { registerUserRoutes } from './modules/users/infrastructure/http/routes/user.routes.js';
+import { registerBankRoutes } from './modules/banks/infrastructure/http/routes/bank.routes.js';
+import { registerAccountRoutes } from './modules/accounts/infrastructure/http/routes/account.routes.js';
+import { registerTransactionRoutes } from './modules/transactions/infrastructure/http/routes/transaction.routes.js';
+import { registerLedgerRoutes } from './modules/ledger/infrastructure/http/routes/ledger.routes.js';
+import { registerHoldRoutes } from './modules/holds/infrastructure/http/routes/hold.routes.js';
+import { registerLimitRoutes } from './modules/limits/infrastructure/http/routes/limit.routes.js';
+import { registerReserveRoutes } from './modules/reserves/infrastructure/http/routes/reserve.routes.js';
+import { auditRoutes } from './modules/audit/infrastructure/http/routes/audit.routes.js';
+
+const API_PREFIX = '/api/v1';
+
+const server = Fastify({
+  logger: false,
   disableRequestLogging: true,
-  requestIdLogLabel: 'correlationId'
+  requestIdLogLabel: 'correlationId',
 });
+
+/**
+ * Aceita pedidos JSON sem corpo (ex.: logout, reverse) em vez de falhar com 500.
+ * O parser por omissão do Fastify rejeita um corpo vazio quando o cliente envia
+ * `Content-Type: application/json`.
+ */
+server.removeContentTypeParser('application/json');
+server.addContentTypeParser(
+  'application/json',
+  { parseAs: 'string' },
+  (_request, body, done) => {
+    if (typeof body !== 'string') {
+      done(null, body);
+      return;
+    }
+    if (body.trim().length === 0) {
+      done(null, undefined);
+      return;
+    }
+    try {
+      done(null, JSON.parse(body));
+    } catch {
+      const error: Error & { statusCode?: number } = new Error(
+        'Corpo JSON inválido'
+      );
+      error.statusCode = 400;
+      done(error, undefined);
+    }
+  }
+);
 
 await server.register(loggerPlugin, {
   serviceName: 'core-banking-service',
   logsDir: './logs',
   logRequests: true,
   logResponses: true,
-  excludePaths: ['/ping', '/health', '/metrics']
+  excludePaths: ['/ping', '/health', '/health/database', '/metrics'],
 });
 
-server.get('/ping', async (request, reply) => {
-  const dbStats = db.pool ? {
-    totalCount: db.pool.totalCount,
-    idleCount: db.pool.idleCount,
-    waitingCount: db.pool.waitingCount
-  } : null;
+server.decorateRequest('user', null);
 
-  server.logger.info('Health check requested', { 
-    correlationId: request.correlationId,
-    databaseStats: dbStats 
-  });
+const container = buildContainer(database);
 
-  return {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'core-banking-service',
-    database: dbStats
-  };
-});
+// ── Health ───────────────────────────────────────────────────────────────────
+server.get('/ping', async () => ({
+  status: 'ok',
+  service: 'core-banking-service',
+  timestamp: new Date().toISOString(),
+  database: {
+    totalCount: database.pool.totalCount,
+    idleCount: database.pool.idleCount,
+    waitingCount: database.pool.waitingCount,
+  },
+}));
 
-server.get('/health/database', async (request, reply) => {
+const databaseHealth = async (): Promise<{
+  status: 'healthy' | 'unhealthy';
+  database: 'connected' | 'disconnected';
+  timestamp: string;
+}> => {
   try {
-    const result = await db.query('SELECT 1 as health_check');
-    
-    server.logger.info('Database health check passed', { 
-      correlationId: request.correlationId 
-    });
-
+    await database.query('SELECT 1 AS ok');
     return {
       status: 'healthy',
+      database: 'connected',
       timestamp: new Date().toISOString(),
-      database: 'connected'
     };
-  } catch (error) {
-    server.logger.error('Database health check failed', error as Error, { 
-      correlationId: request.correlationId 
-    });
-
-    reply.status(503);
+  } catch {
     return {
       status: 'unhealthy',
-      timestamp: new Date().toISOString(),
       database: 'disconnected',
-      error: (error as Error).message
+      timestamp: new Date().toISOString(),
     };
   }
+};
+
+server.get('/health', async () => databaseHealth());
+server.get('/health/database', async (_request, reply) => {
+  const health = await databaseHealth();
+  if (health.status === 'unhealthy') reply.code(503);
+  return health;
 });
 
-const API_PREFIX = '/api/v1';
-
-server.register(BankRoutes, { prefix: API_PREFIX + '/banks' });
-
-server.setErrorHandler(async (error, request, reply) => {
-  
-  server.logger.error(`Unhandled server error: ${error.message}`, error, {
-    correlationId: request.correlationId,
-    method: request.method,
-    url: request.url,
-    userAgent: request.headers['user-agent'],
-    ip: request.ip
-  });
-
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  reply.status(500).send({
-    statusCode: 500,
-    error: 'Internal Server Error',
-    message: isProduction ? 'An unexpected error occurred' : error.message,
-    correlationId: request.correlationId,
-    timestamp: new Date().toISOString()
-  });
+// ── Rotas de negócio ─────────────────────────────────────────────────────────
+await server.register(authRoutes, {
+  prefix: API_PREFIX,
+  service: container.authService,
+  guard: container.guard,
 });
 
-const gracefulShutdown = async (signal: string) => {
-  server.logger.info(`Received ${signal}, starting graceful shutdown...`);
-  
+await server.register(registerUserRoutes, {
+  prefix: API_PREFIX,
+  service: container.userService,
+  guard: container.guard,
+});
+
+await server.register(registerBankRoutes, {
+  prefix: API_PREFIX,
+  service: container.bankService,
+  guard: container.guard,
+});
+
+await server.register(registerAccountRoutes, {
+  prefix: API_PREFIX,
+  service: container.accountService,
+  guard: container.guard,
+});
+
+await server.register(registerTransactionRoutes, {
+  prefix: API_PREFIX,
+  service: container.transactionService,
+  guard: container.guard,
+});
+
+await server.register(registerLedgerRoutes, {
+  prefix: API_PREFIX,
+  service: container.ledgerService,
+  guard: container.guard,
+});
+
+await server.register(registerHoldRoutes, {
+  prefix: API_PREFIX,
+  service: container.holdService,
+  guard: container.guard,
+});
+
+await server.register(registerLimitRoutes, {
+  prefix: API_PREFIX,
+  service: container.limitService,
+  guard: container.guard,
+});
+
+await server.register(registerReserveRoutes, {
+  prefix: API_PREFIX,
+  service: container.reserveService,
+  guard: container.guard,
+});
+
+await server.register(auditRoutes, {
+  prefix: API_PREFIX,
+  service: container.auditService,
+  guard: container.guard,
+});
+
+// ── Shutdown ─────────────────────────────────────────────────────────────────
+const shutdown = async (signal: string): Promise<void> => {
+  server.logger.info(`Recebido ${signal}, a encerrar...`);
   try {
     await server.close();
-    server.logger.info('Fastify server closed');
-    
-    if (db.close) {
-      await db.close();
-      server.logger.info('Database connections closed');
-    }
-    
-    server.logger.info('Graceful shutdown completed');
+    await database.close();
     process.exit(0);
   } catch (error) {
-    server.logger.error('Error during graceful shutdown', error as Error);
+    console.error('Erro durante o shutdown', error);
     process.exit(1);
   }
 };
 
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
-process.on('unhandledRejection', (reason, promise) => {
-  server.logger.error('Unhandled promise rejection', new Error(String(reason)), {
-    promise: promise.toString()
-  });
+process.on('unhandledRejection', (reason) => {
+  server.logger.error('Unhandled promise rejection', reason);
 });
 
 process.on('uncaughtException', (error) => {
@@ -124,22 +191,19 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-const start = async () => {
+const start = async (): Promise<void> => {
   try {
-    const address = await server.listen({ 
-      port: parseInt(process.env.PORT || '9999'),
-      host: process.env.HOST || '0.0.0.0'
+    const address = await server.listen({
+      port: Number(process.env.PORT ?? 9999),
+      host: process.env.HOST ?? '0.0.0.0',
     });
-    
-    server.logger.info(`Server listening at ${address}`, {
-      environment: process.env.NODE_ENV || 'development',
-      port: process.env.PORT || '9999',
-      host: process.env.HOST || '0.0.0.0'
+    server.logger.info(`Servidor a escutar em ${address}`, {
+      environment: process.env.NODE_ENV ?? 'development',
     });
-  } catch (err) {
-    server.logger.error('Failed to start server', err as Error);
+  } catch (error) {
+    server.logger.error('Falha ao iniciar o servidor', error);
     process.exit(1);
   }
 };
 
-start();
+void start();
