@@ -1,5 +1,8 @@
 import './config/env.js';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
 import { database } from '@instantpay/config';
 import { loggerPlugin } from '@instantpay/utils';
 
@@ -113,6 +116,41 @@ await server.register(overviewRoutes, {
   prefix: API_PREFIX,
   service: container.overviewService,
 });
+
+// ── Frontend (build do Vite) ─────────────────────────────────────────────────
+// Em produção, `npm run build` gera `web/dist` e o mesmo processo serve a SPA.
+// Em desenvolvimento, usa `npm run web:dev` (porta 5174, com proxy para /api).
+const webRoot = fileURLToPath(new URL('../web/dist', import.meta.url));
+
+if (existsSync(webRoot)) {
+  await server.register(fastifyStatic, {
+    root: webRoot,
+    prefix: '/',
+  });
+
+  server.setNotFoundHandler((request, reply) => {
+    const url = request.raw.url ?? '';
+    const isApiRoute =
+      url.startsWith('/api/') ||
+      url === '/ping' ||
+      url === '/health' ||
+      url.startsWith('/health/');
+
+    if (isApiRoute) {
+      void reply.code(404).send({
+        status: 'error',
+        error: {
+          type: 'NOT_FOUND',
+          message: 'Rota não encontrada',
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return;
+    }
+
+    void reply.sendFile('index.html');
+  });
+}
 
 // ── Shutdown ─────────────────────────────────────────────────────────────────
 const shutdown = async (signal: string): Promise<void> => {
