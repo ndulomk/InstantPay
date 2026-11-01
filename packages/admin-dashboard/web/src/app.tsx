@@ -7,6 +7,9 @@ import { ServiceFormPage } from '@/modules/services/pages/service-form-page';
 import { IncidentsListPage } from '@/modules/incidents/pages/incidents-list-page';
 import { IncidentDetailPage } from '@/modules/incidents/pages/incident-detail-page';
 import { IncidentFormPage } from '@/modules/incidents/pages/incident-form-page';
+import { FeatureFlagsListPage } from '@/modules/feature-flags/pages/feature-flags-list-page';
+import { FeatureFlagDetailPage } from '@/modules/feature-flags/pages/feature-flag-detail-page';
+import { FeatureFlagFormPage } from '@/modules/feature-flags/pages/feature-flag-form-page';
 
 export const App = () => (
   <BrowserRouter>
@@ -21,6 +24,10 @@ export const App = () => (
         <Route path="incidents/new" element={<IncidentFormPage />} />
         <Route path="incidents/:id" element={<IncidentDetailPage />} />
         <Route path="incidents/:id/edit" element={<IncidentFormPage />} />
+        <Route path="feature-flags" element={<FeatureFlagsListPage />} />
+        <Route path="feature-flags/new" element={<FeatureFlagFormPage />} />
+        <Route path="feature-flags/:id" element={<FeatureFlagDetailPage />} />
+        <Route path="feature-flags/:id/edit" element={<FeatureFlagFormPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
