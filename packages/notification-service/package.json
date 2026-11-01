@@ -1,7 +1,7 @@
 {
-  "name": "notification-service",
+  "name": "@instantpay/notification-service",
   "version": "0.0.0",
-  "description": "notification-service service",
+  "description": "Notification templates, multi-channel delivery and retries",
   "keywords": [
     "instantPayment"
   ],
@@ -9,20 +9,26 @@
   "homepage": "http://home",
   "license": "MIT",
   "type": "module",
-  "main": "dist/notification-service.js",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx src/notification-service.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/notification-service.js",
+    "start": "node dist/index.js",
     "test": "bun test"
   },
   "dependencies": {
-    "fastify": "^4.28.1"
+    "fastify": "^4.28.1",
+    "@instantpay/config": "^1.0.0",
+    "@instantpay/utils": "^1.0.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "zod": "^4.1.9"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
     "tsx": "^4.19.2",
-    "@types/node": "^22.5.5"
+    "@types/node": "^22.5.5",
+    "@types/pg": "^8.15.5"
   },
   "repository": {
     "type": "git",
