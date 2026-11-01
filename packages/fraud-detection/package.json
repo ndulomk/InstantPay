@@ -1,7 +1,7 @@
 {
-  "name": "fraud-detection",
+  "name": "@instantpay/fraud-detection",
   "version": "0.0.0",
-  "description": "fraud-detection service",
+  "description": "Fraud detection with configurable rules, risk scoring and feedback",
   "keywords": [
     "instantPayment"
   ],
@@ -11,18 +11,24 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "bun test"
   },
   "dependencies": {
-    "fastify": "^4.28.1"
+    "fastify": "^4.28.1",
+    "@instantpay/config": "^1.0.0",
+    "@instantpay/utils": "^1.0.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "zod": "^4.1.9"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
     "tsx": "^4.19.2",
-    "@types/node": "^22.5.5"
+    "@types/node": "^22.5.5",
+    "@types/pg": "^8.15.5"
   },
   "repository": {
     "type": "git",
