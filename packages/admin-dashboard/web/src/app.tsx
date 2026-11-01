@@ -10,6 +10,7 @@ import { IncidentFormPage } from '@/modules/incidents/pages/incident-form-page';
 import { FeatureFlagsListPage } from '@/modules/feature-flags/pages/feature-flags-list-page';
 import { FeatureFlagDetailPage } from '@/modules/feature-flags/pages/feature-flag-detail-page';
 import { FeatureFlagFormPage } from '@/modules/feature-flags/pages/feature-flag-form-page';
+import { HealthChecksPage } from '@/modules/health-checks/pages/health-checks-page';
 
 export const App = () => (
   <BrowserRouter>
@@ -28,6 +29,7 @@ export const App = () => (
         <Route path="feature-flags/new" element={<FeatureFlagFormPage />} />
         <Route path="feature-flags/:id" element={<FeatureFlagDetailPage />} />
         <Route path="feature-flags/:id/edit" element={<FeatureFlagFormPage />} />
+        <Route path="health-checks" element={<HealthChecksPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
