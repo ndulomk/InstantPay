@@ -9,9 +9,10 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/gateway-api` | Implementado: API keys, rate limiting, proxy e request logs |
 | `@instantpay/payment-processor` | Implementado: pagamentos, reembolsos, idempotência e webhooks |
 | `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
+| `@instantpay/notification-service` | Implementado: templates, entrega multi-canal, tentativas e retries |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
-| `notification-service`, `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
+| `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
 
 ## Arranque rápido — core-banking
 
@@ -67,3 +68,16 @@ npm run start --workspace @instantpay/fraud-detection
 
 O motor de fraude escuta em `http://localhost:9996`. Documentação:
 [`packages/fraud-detection/README.md`](packages/fraud-detection/README.md).
+
+## Arranque rápido — notification-service
+
+```bash
+psql "$DATABASE_URL" -f packages/notification-service/init.sql
+cp packages/notification-service/.env.example packages/notification-service/.env
+
+npm run build --workspace @instantpay/notification-service
+npm run start --workspace @instantpay/notification-service
+```
+
+O serviço de notificações escuta em `http://localhost:9995`. Documentação:
+[`packages/notification-service/README.md`](packages/notification-service/README.md).
