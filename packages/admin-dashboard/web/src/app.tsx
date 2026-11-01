@@ -4,6 +4,9 @@ import { DashboardPage } from '@/modules/overview/pages/dashboard-page';
 import { ServicesListPage } from '@/modules/services/pages/services-list-page';
 import { ServiceDetailPage } from '@/modules/services/pages/service-detail-page';
 import { ServiceFormPage } from '@/modules/services/pages/service-form-page';
+import { IncidentsListPage } from '@/modules/incidents/pages/incidents-list-page';
+import { IncidentDetailPage } from '@/modules/incidents/pages/incident-detail-page';
+import { IncidentFormPage } from '@/modules/incidents/pages/incident-form-page';
 
 export const App = () => (
   <BrowserRouter>
@@ -14,6 +17,10 @@ export const App = () => (
         <Route path="services/new" element={<ServiceFormPage />} />
         <Route path="services/:id" element={<ServiceDetailPage />} />
         <Route path="services/:id/edit" element={<ServiceFormPage />} />
+        <Route path="incidents" element={<IncidentsListPage />} />
+        <Route path="incidents/new" element={<IncidentFormPage />} />
+        <Route path="incidents/:id" element={<IncidentDetailPage />} />
+        <Route path="incidents/:id/edit" element={<IncidentFormPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
