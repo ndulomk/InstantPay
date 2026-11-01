@@ -11,9 +11,9 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
 | `@instantpay/notification-service` | Implementado: templates, entrega multi-canal, tentativas e retries |
 | `@instantpay/reconciliation` | Implementado: extractos, correspondência, discrepâncias e relatórios |
+| `@instantpay/admin-dashboard` | Implementado: monitorização, incidentes, feature flags e overview |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
-| `admin-dashboard` | Estrutura inicial / a completar |
 
 ## Arranque rápido — core-banking
 
@@ -95,3 +95,17 @@ npm run start --workspace @instantpay/reconciliation
 
 O serviço de reconciliação escuta em `http://localhost:9994`. Documentação:
 [`packages/reconciliation/README.md`](packages/reconciliation/README.md).
+
+## Arranque rápido — admin-dashboard
+
+```bash
+psql "$DATABASE_URL" -f packages/admin-dashboard/init.sql
+cp packages/admin-dashboard/.env.example packages/admin-dashboard/.env
+
+npm run build --workspace @instantpay/admin-dashboard
+npm run start --workspace @instantpay/admin-dashboard
+```
+
+O plano de controlo administrativo escuta em `http://localhost:9993`.
+Documentação:
+[`packages/admin-dashboard/README.md`](packages/admin-dashboard/README.md).
