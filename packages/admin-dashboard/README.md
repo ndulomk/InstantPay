@@ -12,6 +12,7 @@ do sistema.
 - Zod para validação
 - `@instantpay/config` para a pool de base de dados
 - `@instantpay/utils` para `Result`, erros, logger e respostas HTTP
+- React 18 + Vite 6 + Tailwind 3 + TanStack Query (interface em `web/`)
 
 ## Arquitectura
 
@@ -30,6 +31,17 @@ src/
     ├── incidents/           # incidentes operacionais
     ├── feature-flags/       # flags, rollout e avaliação
     └── overview/            # leitura agregada do estado do sistema
+
+web/
+├── index.html
+├── vite.config.ts           # dev 5174, proxy /api -> 9993
+├── tailwind.config.cjs
+└── src/
+    ├── app.tsx              # rotas da SPA
+    ├── components/          # TableAll, paginação, shell e barrel do kit
+    ├── lib/                 # api-client, React Query, formatação
+    └── modules/             # overview, services, incidents, feature-flags,
+                             # health-checks e settings
 ```
 
 Cada módulo segue o padrão:
@@ -70,7 +82,26 @@ Em desenvolvimento:
 
 ```bash
 npm run dev --workspace @instantpay/admin-dashboard
+npm run web:dev --workspace @instantpay/admin-dashboard
 ```
+
+O backend escuta em `http://localhost:9993`; o Vite em `http://localhost:5174`
+com proxy `/api` para o backend. O `build` também gera `web/dist`, e nesse caso
+o próprio Fastify serve a SPA em `http://localhost:9993`.
+
+## Interface web
+
+A SPA em `web/` usa o kit Kesa (`src/kit`) e cobre:
+
+- dashboard com saúde dos serviços, incidentes e flags;
+- lista/detalhe/formulário de serviços e execução de health checks;
+- lista/detalhe/formulário de incidentes, com reconhecer/resolver/reabrir;
+- lista/detalhe/formulário de feature flags e avaliação por `subjectId`;
+- histórico de health checks com filtros por serviço e estado;
+- configurações de API base e tema.
+
+Detalhes de desenvolvimento, rotas e arquitectura:
+[`web/README.md`](web/README.md).
 
 ## API
 

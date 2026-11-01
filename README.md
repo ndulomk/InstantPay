@@ -11,7 +11,7 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
 | `@instantpay/notification-service` | Implementado: templates, entrega multi-canal, tentativas e retries |
 | `@instantpay/reconciliation` | Implementado: extractos, correspondência, discrepâncias e relatórios |
-| `@instantpay/admin-dashboard` | Implementado: monitorização, incidentes, feature flags e overview |
+| `@instantpay/admin-dashboard` | Implementado: monitorização, incidentes, feature flags, overview e SPA React |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
 
@@ -106,6 +106,13 @@ npm run build --workspace @instantpay/admin-dashboard
 npm run start --workspace @instantpay/admin-dashboard
 ```
 
-O plano de controlo administrativo escuta em `http://localhost:9993`.
+O plano de controlo administrativo escuta em `http://localhost:9993` e serve a
+SPA na mesma porta. Para desenvolvimento com HMR:
+
+```bash
+npm run web:dev --workspace @instantpay/admin-dashboard
+# http://localhost:5174 (proxy /api -> 9993)
+```
+
 Documentação:
 [`packages/admin-dashboard/README.md`](packages/admin-dashboard/README.md).
