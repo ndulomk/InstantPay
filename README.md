@@ -10,9 +10,10 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/payment-processor` | Implementado: pagamentos, reembolsos, idempotência e webhooks |
 | `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
 | `@instantpay/notification-service` | Implementado: templates, entrega multi-canal, tentativas e retries |
+| `@instantpay/reconciliation` | Implementado: extractos, correspondência, discrepâncias e relatórios |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
-| `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
+| `admin-dashboard` | Estrutura inicial / a completar |
 
 ## Arranque rápido — core-banking
 
@@ -81,3 +82,16 @@ npm run start --workspace @instantpay/notification-service
 
 O serviço de notificações escuta em `http://localhost:9995`. Documentação:
 [`packages/notification-service/README.md`](packages/notification-service/README.md).
+
+## Arranque rápido — reconciliation
+
+```bash
+psql "$DATABASE_URL" -f packages/reconciliation/init.sql
+cp packages/reconciliation/.env.example packages/reconciliation/.env
+
+npm run build --workspace @instantpay/reconciliation
+npm run start --workspace @instantpay/reconciliation
+```
+
+O serviço de reconciliação escuta em `http://localhost:9994`. Documentação:
+[`packages/reconciliation/README.md`](packages/reconciliation/README.md).
