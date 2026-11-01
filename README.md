@@ -8,9 +8,10 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/core-banking` | Implementado: auth, users, banks, accounts, transactions, ledger, holds, limits, reserves e audit |
 | `@instantpay/gateway-api` | Implementado: API keys, rate limiting, proxy e request logs |
 | `@instantpay/payment-processor` | Implementado: pagamentos, reembolsos, idempotência e webhooks |
+| `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
-| `fraud-detection`, `notification-service`, `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
+| `notification-service`, `reconciliation`, `admin-dashboard` | Estrutura inicial / a completar |
 
 ## Arranque rápido — core-banking
 
@@ -53,3 +54,16 @@ npm run start --workspace @instantpay/payment-processor
 
 O processador escuta em `http://localhost:9997`. Documentação:
 [`packages/payment-processor/README.md`](packages/payment-processor/README.md).
+
+## Arranque rápido — fraud-detection
+
+```bash
+psql "$DATABASE_URL" -f packages/fraud-detection/init.sql
+cp packages/fraud-detection/.env.example packages/fraud-detection/.env
+
+npm run build --workspace @instantpay/fraud-detection
+npm run start --workspace @instantpay/fraud-detection
+```
+
+O motor de fraude escuta em `http://localhost:9996`. Documentação:
+[`packages/fraud-detection/README.md`](packages/fraud-detection/README.md).
