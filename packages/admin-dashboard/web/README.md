@@ -2,7 +2,7 @@
 
 SPA React que consome a API do `@instantpay/admin-dashboard` e cobre todas as
 áreas do plano de controlo: dashboard, serviços, incidentes, feature flags,
-health checks e configurações.
+health checks, laboratório de testes end-to-end e configurações.
 
 ## Stack
 
@@ -61,6 +61,7 @@ Router. Rotas `/api/*`, `/ping` e `/health*` continuam a responder JSON.
 | `/feature-flags/:id` | Detalhe (info + avaliação) |
 | `/feature-flags/:id/edit` | Editar flag |
 | `/health-checks` | Histórico de health checks |
+| `/lab` | Laboratório de testes end-to-end |
 | `/settings` | API base, tema e portas da plataforma |
 
 ## API e configuração
@@ -93,6 +94,7 @@ web/src/
 │   ├── incidents/           # lista, detalhe, form
 │   ├── feature-flags/       # lista, detalhe, form
 │   ├── health-checks/       # histórico
+│   ├── lab/                 # laboratório e ambiente demo
 │   └── settings/
 └── types/admin.ts           # DTOs da API
 ```

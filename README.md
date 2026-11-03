@@ -11,7 +11,7 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/fraud-detection` | Implementado: regras, score de risco, decisões e feedback |
 | `@instantpay/notification-service` | Implementado: templates, entrega multi-canal, tentativas e retries |
 | `@instantpay/reconciliation` | Implementado: extractos, correspondência, discrepâncias e relatórios |
-| `@instantpay/admin-dashboard` | Implementado: monitorização, incidentes, feature flags, overview e SPA React |
+| `@instantpay/admin-dashboard` | Implementado: monitorização, incidentes, feature flags, overview, laboratório de testes end-to-end e SPA React |
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
 
@@ -67,6 +67,24 @@ docker compose down -v
 Os scripts de init SQL só correm quando o volume `instantpay_pgdata` é criado
 pela primeira vez. O Compose substitui os URLs `127.0.0.1` do seed do admin
 pelos nomes dos serviços Docker (`core-banking`, `gateway-api`, etc.).
+
+## Laboratório de testes
+
+O admin inclui uma página **Laboratório** em <http://localhost:9993/lab> que
+executa fluxos reais contra os serviços registados, sem mocks do lado do admin:
+
+- cria um utilizador, banco e duas contas de teste com saldo inicial;
+- deposita e transfere dinheiro via core-banking;
+- avalia risco de fraude com regras, dispositivo novo, IP estrangeiro e
+  velocidade de transacções;
+- cria pagamentos no payment-processor;
+- envia notificações personalizadas ou por template;
+- cria extractos, linhas e executa a reconciliação;
+- cria uma API key temporária, chama o gateway e revoga a chave.
+
+O botão **Teste completo** corre todos os passos em sequência e devolve um
+relatório com estado, duração e resumo de cada serviço. O ambiente de teste é
+guardado apenas no `sessionStorage` do browser.
 
 ## Arranque rápido — core-banking
 

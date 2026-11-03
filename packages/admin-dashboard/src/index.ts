@@ -12,6 +12,7 @@ import { monitoringRoutes } from './modules/monitoring/infrastructure/http/route
 import { incidentRoutes } from './modules/incidents/infrastructure/http/routes/incident.routes.js';
 import { featureFlagRoutes } from './modules/feature-flags/infrastructure/http/routes/feature-flag.routes.js';
 import { overviewRoutes } from './modules/overview/infrastructure/http/routes/overview.routes.js';
+import { sandboxRoutes } from './modules/sandbox/infrastructure/http/routes/sandbox.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -115,6 +116,11 @@ await server.register(featureFlagRoutes, {
 await server.register(overviewRoutes, {
   prefix: API_PREFIX,
   service: container.overviewService,
+});
+
+await server.register(sandboxRoutes, {
+  prefix: API_PREFIX,
+  service: container.sandboxService,
 });
 
 // ── Frontend (build do Vite) ─────────────────────────────────────────────────

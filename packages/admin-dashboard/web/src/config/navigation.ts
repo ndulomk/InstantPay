@@ -1,4 +1,5 @@
 import {
+  BeakerIcon,
   Cog6ToothIcon,
   ExclamationTriangleIcon,
   FlagIcon,
@@ -21,6 +22,7 @@ export const PRIMARY_NAV: AdminNavItem[] = [
   { label: 'Incidentes', path: '/incidents', icon: ExclamationTriangleIcon },
   { label: 'Feature flags', path: '/feature-flags', icon: FlagIcon },
   { label: 'Health checks', path: '/health-checks', icon: HeartIcon },
+  { label: 'Laboratório', path: '/lab', icon: BeakerIcon },
 ];
 
 export const SETTINGS_NAV: AdminNavItem[] = [

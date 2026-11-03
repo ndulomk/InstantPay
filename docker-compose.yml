@@ -264,6 +264,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
       ADMIN_DEFAULT_HEALTH_TIMEOUT_MS: 3000
+      ADMIN_SANDBOX_TIMEOUT_MS: 15000
+      GATEWAY_ADMIN_TOKEN: ${GATEWAY_ADMIN_TOKEN:-change-me-gateway-admin-token}
     depends_on:
       postgres:
         condition: service_healthy

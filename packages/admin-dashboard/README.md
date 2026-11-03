@@ -1,8 +1,8 @@
 # `@instantpay/admin-dashboard`
 
 Plano de controlo administrativo do InstantPay: monitorização de serviços,
-incidentes operacionais, feature flags com rollout determinístico e visão geral
-do sistema.
+incidentes operacionais, feature flags com rollout determinístico, visão geral
+do sistema e laboratório de testes end-to-end.
 
 ## Stack
 
@@ -30,7 +30,8 @@ src/
     ├── monitoring/          # registo de serviços e health checks
     ├── incidents/           # incidentes operacionais
     ├── feature-flags/       # flags, rollout e avaliação
-    └── overview/            # leitura agregada do estado do sistema
+    ├── overview/            # leitura agregada do estado do sistema
+    └── sandbox/             # laboratório: ambiente demo + orquestração
 
 web/
 ├── index.html
@@ -41,7 +42,7 @@ web/
     ├── components/          # TableAll, paginação, shell e barrel do kit
     ├── lib/                 # api-client, React Query, formatação
     └── modules/             # overview, services, incidents, feature-flags,
-                             # health-checks e settings
+                             # health-checks, lab e settings
 ```
 
 Cada módulo segue o padrão:
@@ -64,6 +65,8 @@ cp packages/admin-dashboard/.env.example packages/admin-dashboard/.env
 | --- | --- | --- |
 | `DATABASE_URL` ou `DB_*` | Sim | Ligação PostgreSQL |
 | `ADMIN_DEFAULT_HEALTH_TIMEOUT_MS` | Não | Timeout por omissão dos health checks (default `3000`) |
+| `ADMIN_SANDBOX_TIMEOUT_MS` | Não | Timeout das chamadas do laboratório (default `15000`) |
+| `GATEWAY_ADMIN_TOKEN` | Não | Token para criar/revogar API keys temporárias no gateway; sem ele o passo de gateway do laboratório falha |
 | `PORT` | Não | Default `9993` |
 
 O schema inclui os seis serviços do ecossistema local e duas feature flags de
@@ -98,6 +101,8 @@ A SPA em `web/` usa o kit Kesa (`src/kit`) e cobre:
 - lista/detalhe/formulário de incidentes, com reconhecer/resolver/reabrir;
 - lista/detalhe/formulário de feature flags e avaliação por `subjectId`;
 - histórico de health checks com filtros por serviço e estado;
+- laboratório com ambiente demo, transferências, fraude, pagamentos,
+  notificações, reconciliação, gateway e teste completo;
 - configurações de API base e tema.
 
 Detalhes de desenvolvimento, rotas e arquitectura:
@@ -129,6 +134,10 @@ Todas as rotas estão sob `/api/v1`.
 | `PATCH` | `/admin/feature-flags/:id/status` | Activar/desactivar |
 | `POST` | `/admin/feature-flags/:key/evaluate` | Avaliar flag para um sujeito |
 | `GET` | `/admin/overview` | Visão geral operacional |
+| `POST` | `/admin/sandbox/demo` | Criar utilizador, banco e contas de teste |
+| `POST` | `/admin/sandbox/request` | Encaminhar um pedido para um serviço registado |
+| `POST` | `/admin/sandbox/gateway` | Testar o gateway com uma API key temporária |
+| `POST` | `/admin/sandbox/smoke` | Executar o teste completo de todos os serviços |
 | `GET` | `/ping` | Liveness |
 | `GET` | `/health` | Saúde + base de dados |
 | `GET` | `/health/database` | Apenas base de dados |
@@ -172,6 +181,65 @@ latência, estado HTTP e mensagem de erro.
   }
 }
 ```
+
+## Laboratório de testes
+
+O módulo `sandbox` resolve os URLs a partir dos serviços registados em
+`admin_services` e executa chamadas reais. Os caminhos aceites são limitados
+aos prefixos de cada serviço:
+
+| Serviço | Prefixos |
+| --- | --- |
+| `core-banking` | `/api/v1` |
+| `payment-processor` | `/api/v1/payments` |
+| `fraud-detection` | `/api/v1/fraud` |
+| `notification-service` | `/api/v1/notifications` |
+| `reconciliation` | `/api/v1/reconciliation` |
+
+Criar um ambiente demo (duas contas, banco e saldo inicial):
+
+```bash
+curl -X POST http://localhost:9993/api/v1/admin/sandbox/demo
+```
+
+Executar um pedido arbitrário num serviço registado (o `authorization` é
+encaminhado para o serviço de destino):
+
+```bash
+curl -X POST http://localhost:9993/api/v1/admin/sandbox/request \
+  -H 'content-type: application/json' \
+  -d '{
+    "service": "core-banking",
+    "method": "POST",
+    "path": "/api/v1/transactions/transfer",
+    "headers": { "authorization": "Bearer <token-do-demo>" },
+    "body": {
+      "fromAccountId": "<conta-1>",
+      "toAccountId": "<conta-2>",
+      "amount": 1250,
+      "description": "Teste manual"
+    }
+  }'
+```
+
+Testar o gateway (cria uma API key, faz o pedido e revoga a chave):
+
+```bash
+curl -X POST http://localhost:9993/api/v1/admin/sandbox/gateway \
+  -H 'content-type: application/json' \
+  -d '{"method":"GET","path":"/api/v1/fraud/rules?pageSize=5"}'
+```
+
+O teste completo executa health, criação do ambiente, transferência, avaliação
+de fraude, pagamento, notificação, reconciliação e gateway:
+
+```bash
+curl -X POST http://localhost:9993/api/v1/admin/sandbox/smoke
+```
+
+Cada passo devolve `passed`, `failed` ou `skipped`, com duração e resumo. O
+laboratório não tem autenticação própria: exponha o admin apenas numa rede
+interna e proteja o acesso com a camada de autenticação da tua infraestrutura.
 
 ## Incidentes
 

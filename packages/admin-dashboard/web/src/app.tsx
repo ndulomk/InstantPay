@@ -11,6 +11,7 @@ import { FeatureFlagsListPage } from '@/modules/feature-flags/pages/feature-flag
 import { FeatureFlagDetailPage } from '@/modules/feature-flags/pages/feature-flag-detail-page';
 import { FeatureFlagFormPage } from '@/modules/feature-flags/pages/feature-flag-form-page';
 import { HealthChecksPage } from '@/modules/health-checks/pages/health-checks-page';
+import { LabPage } from '@/modules/lab/pages/lab-page';
 import { SettingsPage } from '@/modules/settings/pages/settings-page';
 
 export const App = () => (
@@ -29,8 +30,12 @@ export const App = () => (
         <Route path="feature-flags" element={<FeatureFlagsListPage />} />
         <Route path="feature-flags/new" element={<FeatureFlagFormPage />} />
         <Route path="feature-flags/:id" element={<FeatureFlagDetailPage />} />
-        <Route path="feature-flags/:id/edit" element={<FeatureFlagFormPage />} />
+        <Route
+          path="feature-flags/:id/edit"
+          element={<FeatureFlagFormPage />}
+        />
         <Route path="health-checks" element={<HealthChecksPage />} />
+        <Route path="lab" element={<LabPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

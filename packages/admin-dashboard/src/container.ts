@@ -27,6 +27,9 @@ import { createOverviewRepository } from './modules/overview/infrastructure/pers
 import { createOverviewService } from './modules/overview/application/services/overview.service.js';
 import type { IOverviewService } from './modules/overview/application/ports/overview.port.js';
 
+import { createSandboxService } from './modules/sandbox/application/services/sandbox.service.js';
+import type { ISandboxService } from './modules/sandbox/application/ports/sandbox.port.js';
+
 export type Container = {
   eventBus: EventBus;
   withTransaction: TransactionRunner;
@@ -34,6 +37,7 @@ export type Container = {
   incidentService: IIncidentService;
   featureFlagService: IFeatureFlagService;
   overviewService: IOverviewService;
+  sandboxService: ISandboxService;
 };
 
 export const buildContainer = (db: Database): Container => {
@@ -58,15 +62,17 @@ export const buildContainer = (db: Database): Container => {
     eventBus,
     env.ADMIN_DEFAULT_HEALTH_TIMEOUT_MS
   );
-  const incidentService = createIncidentService(
-    incidentRepository,
-    eventBus
-  );
+  const incidentService = createIncidentService(incidentRepository, eventBus);
   const featureFlagService = createFeatureFlagService(
     featureFlagRepository,
     eventBus
   );
   const overviewService = createOverviewService(overviewRepository);
+  const sandboxService = createSandboxService({
+    services: serviceRepository,
+    gatewayAdminToken: env.GATEWAY_ADMIN_TOKEN,
+    timeoutMs: env.ADMIN_SANDBOX_TIMEOUT_MS,
+  });
 
   return {
     eventBus,
@@ -75,6 +81,7 @@ export const buildContainer = (db: Database): Container => {
     incidentService,
     featureFlagService,
     overviewService,
+    sandboxService,
   };
 };
 

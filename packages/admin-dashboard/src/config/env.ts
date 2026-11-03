@@ -24,6 +24,15 @@ const envSchema = z
       .min(100)
       .max(60_000)
       .default(3000),
+
+    ADMIN_SANDBOX_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .min(1_000)
+      .max(120_000)
+      .default(15_000),
+
+    GATEWAY_ADMIN_TOKEN: z.string().min(16).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.DATABASE_URL) return;
