@@ -15,6 +15,59 @@ Sistema de Pagamento Instantâneo + Gateway, Objetivo: Desenvolver um sistema de
 | `@instantpay/config` | Implementado: gestão de base de dados PostgreSQL e configuração |
 | `@instantpay/utils` | Implementado: Result, erros, logger Fastify, validação e helpers HTTP |
 
+## Docker
+
+Toda a plataforma (Postgres + 7 serviços) pode ser executada com Docker
+Compose. As imagens publicadas estão em Docker Hub sob o namespace
+`eddiendulo`:
+
+| Imagem | Porta |
+| --- | --- |
+| `eddiendulo/instantpay-postgres` | `55432` (host) |
+| `eddiendulo/instantpay-core-banking` | `9999` |
+| `eddiendulo/instantpay-gateway-api` | `9998` |
+| `eddiendulo/instantpay-payment-processor` | `9997` |
+| `eddiendulo/instantpay-fraud-detection` | `9996` |
+| `eddiendulo/instantpay-notification-service` | `9995` |
+| `eddiendulo/instantpay-reconciliation` | `9994` |
+| `eddiendulo/instantpay-admin-dashboard` | `9993` |
+
+```bash
+cp docker/.env.example .env
+docker compose up -d --build
+
+# ou, usando as imagens já publicadas:
+docker compose pull
+docker compose up -d
+```
+
+Depois do arranque:
+
+- Admin UI e API: <http://localhost:9993>
+- Health do admin: <http://localhost:9993/health/database>
+- Postgres: `postgres://postgres:postgres@localhost:55432/instantpay`
+
+O `docker/.env.example` contém os segredos e limiares configuráveis. Os valores
+por omissão servem apenas para desenvolvimento local; altere pelo menos
+`POSTGRES_PASSWORD`, `JWT_SECRET` e `GATEWAY_ADMIN_TOKEN` em produção.
+
+Para reconstruir e publicar todas as imagens no Docker Hub:
+
+```bash
+DOCKERHUB_USER=eddiendulo TAG=latest ./docker/publish.sh
+```
+
+O script requer `docker login` e publica também uma tag imutável
+`sha-<commit>` para cada imagem. Para limpar dados locais:
+
+```bash
+docker compose down -v
+```
+
+Os scripts de init SQL só correm quando o volume `instantpay_pgdata` é criado
+pela primeira vez. O Compose substitui os URLs `127.0.0.1` do seed do admin
+pelos nomes dos serviços Docker (`core-banking`, `gateway-api`, etc.).
+
 ## Arranque rápido — core-banking
 
 ```bash

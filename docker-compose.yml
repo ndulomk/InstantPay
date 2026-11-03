@@ -1,8 +1,289 @@
-services:
-  web:
-    build: .
-    ports: 
-      - "5000:5000"
-    volumes:
+name: instantpay
 
-    
+x-defaults: &defaults
+  restart: unless-stopped
+  networks:
+    - instantpay
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '3'
+
+x-healthcheck: &healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 30s
+
+services:
+  postgres:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-postgres:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: instantpay
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - '${POSTGRES_PORT:-55432}:5432'
+    volumes:
+      - instantpay_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d instantpay']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  core-banking:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-core-banking:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: core-banking
+        PORT: 9999
+    ports:
+      - '9999:9999'
+    environment:
+      NODE_ENV: production
+      PORT: 9999
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-random-secret-with-at-least-32-chars}
+      JWT_ACCESS_TTL_SECONDS: 900
+      JWT_REFRESH_TTL_SECONDS: 604800
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9999/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  gateway-api:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-gateway-api:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: gateway-api
+        PORT: 9998
+    ports:
+      - '9998:9998'
+    environment:
+      NODE_ENV: production
+      PORT: 9998
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      GATEWAY_ADMIN_TOKEN: ${GATEWAY_ADMIN_TOKEN:-change-me-gateway-admin-token}
+      CORE_BANKING_URL: http://core-banking:9999
+      PAYMENT_PROCESSOR_URL: http://payment-processor:9997
+      FRAUD_DETECTION_URL: http://fraud-detection:9996
+      NOTIFICATION_SERVICE_URL: http://notification-service:9995
+      RECONCILIATION_URL: http://reconciliation:9994
+      ADMIN_DASHBOARD_URL: http://admin-dashboard:9993
+      UPSTREAM_TIMEOUT_MS: 10000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      core-banking:
+        condition: service_healthy
+      payment-processor:
+        condition: service_healthy
+      fraud-detection:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      reconciliation:
+        condition: service_healthy
+      admin-dashboard:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9998/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  payment-processor:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-payment-processor:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: payment-processor
+        PORT: 9997
+    ports:
+      - '9997:9997'
+    environment:
+      NODE_ENV: production
+      PORT: 9997
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_DEFAULT_CURRENCY: ${PAYMENT_DEFAULT_CURRENCY:-AOA}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-change-me-payment-webhook-secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9997/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  fraud-detection:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-fraud-detection:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: fraud-detection
+        PORT: 9996
+    ports:
+      - '9996:9996'
+    environment:
+      NODE_ENV: production
+      PORT: 9996
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      FRAUD_REVIEW_THRESHOLD: ${FRAUD_REVIEW_THRESHOLD:-50}
+      FRAUD_BLOCK_THRESHOLD: ${FRAUD_BLOCK_THRESHOLD:-80}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9996/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  notification-service:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-notification-service:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: notification-service
+        PORT: 9995
+    ports:
+      - '9995:9995'
+    environment:
+      NODE_ENV: production
+      PORT: 9995
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      NOTIFICATION_PROVIDER: ${NOTIFICATION_PROVIDER:-mock}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9995/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  reconciliation:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-reconciliation:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: reconciliation
+        PORT: 9994
+    ports:
+      - '9994:9994'
+    environment:
+      NODE_ENV: production
+      PORT: 9994
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      RECONCILIATION_DATE_WINDOW_DAYS: ${RECONCILIATION_DATE_WINDOW_DAYS:-3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9994/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+  admin-dashboard:
+    <<: *defaults
+    image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-admin-dashboard:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: admin-dashboard
+        PORT: 9993
+    ports:
+      - '9993:9993'
+    environment:
+      NODE_ENV: production
+      PORT: 9993
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: 'postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/instantpay'
+      ADMIN_DEFAULT_HEALTH_TIMEOUT_MS: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9993/health/database').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+
+networks:
+  instantpay:
+    name: instantpay
+
+volumes:
+  instantpay_pgdata:
+    name: instantpay_pgdata

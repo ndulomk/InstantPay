@@ -12,7 +12,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json && npm run web:build",
+    "build": "tsc -p tsconfig.json && vite build --config web/vite.config.ts",
     "start": "node dist/index.js",
     "web:dev": "vite --config web/vite.config.ts",
     "web:build": "vite build --config web/vite.config.ts",

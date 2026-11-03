@@ -1,0 +1,30 @@
+# Ignore everything that is not required to build the images.
+.git
+.github
+.gitignore
+.directory
+.vscode
+.idea
+
+node_modules
+**/node_modules
+
+dist
+**/dist
+
+logs
+**/logs
+
+*.log
+**/*.log
+*.tsbuildinfo
+**/*.tsbuildinfo
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Local-only documentation and scratch files.
+makemodulo.txt
+HOWTO*
+Tasks.md
