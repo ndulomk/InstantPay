@@ -254,10 +254,7 @@ services:
     image: ${DOCKERHUB_USER:-eddiendulo}/instantpay-admin-dashboard:${TAG:-latest}
     build:
       context: .
-      dockerfile: docker/service.Dockerfile
-      args:
-        SERVICE: admin-dashboard
-        PORT: 9993
+      dockerfile: docker/admin-dashboard.Dockerfile
     ports:
       - '9993:9993'
     environment:
